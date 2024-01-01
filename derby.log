@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Mon Jan 01 15:49:03 CST 2024:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.13.1.1 - (1765088): instance a816c00e-018c-c700-6c8a-000001e8b500 
+on database directory /Users/justinmills/Downloads/incidents/incidents with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@251a69d7 
+Loaded from file:/Users/justinmills/.m2/repository/org/apache/derby/derby/10.13.1.1/derby-10.13.1.1.jar
+java.vendor=Amazon.com Inc.
+java.runtime.version=17.0.9+8-LTS
+user.dir=/Users/justinmills/Downloads/incidents
+os.name=Mac OS X
+os.arch=aarch64
+os.version=12.0.1
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''

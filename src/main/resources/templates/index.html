@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCw9hmr5G76O7-3yShu9BJE7bjm-opmV9o&callback=initMap&libraries=places&v=weekly"
+            defer></script>
+
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+
+    <link rel="stylesheet" href="https://bootswatch.com/5/minty/bootstrap.css" />
+</head>
+
+<body>
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-md-6">
+            <H1 style=text-align:center> WFPS Active Incident Map:</H1>
+            <div id="map" style="width: 100%; height: 100vh"></div>
+
+        </div>
+        <div class="col-md-6">
+            <table class="table table-hover">
+                <tr>
+                    <th>Incident Type</th>
+                    <th>Motor Vehicle Incident?</th>
+                    <th>Neighbourhood</th>
+                    <th>Call Time</th>
+                    <!--        <th>Units Dispatched</th>-->
+                    <th>Ward</th>
+                    <th>Incident Number</th>
+                </tr>
+                <tr th:each="data: ${incidents}">
+                    <td><span th:text="${data.INCIDENT_TYPE}"></span></td>
+                    <td><span th:text="${data.IS_MOTOR}"></span></td>
+                    <td><span th:text="${data.NEIGHBOURHOOD}"></span></td>
+                    <td><span th:text="${data.CALL_TIME}"></span></td>
+                    <!--        <td><span th:text="${data.units}"></span></td>-->
+                    <td><span th:text="${data.WARD}"></span></td>
+                    <td><span th:text="${data.INCIDENT_NUMBER}"></span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var message = /*[[${neighbourhoodList}]]*/ 'default';
+    console.log(message);
+
+    function initMap() {
+      const winnipeg = new google.maps.LatLng(49.895, -97.139);
+
+
+      infowindow = new google.maps.InfoWindow();
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: winnipeg,
+        zoom: 12,
+      });
+
+      service = new google.maps.places.PlacesService(map);
+      for (let i = 0; i < message.length; i++) {
+
+
+
+        const request = {
+          query: message[i] + " Winnipeg",
+          fields: ["name", "geometry"],
+        };
+        service.findPlaceFromQuery(request, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            for (let i = 0; i < results.length; i++) {
+              createMarker(results[i], "asdf");
+            }
+
+          }
+
+        });
+      }
+    };
+
+    function createMarker(place, tstring) {
+      if (!place.geometry || !place.geometry.location) return;
+
+      const marker = new google.maps.Marker({
+        map,
+        position: place.geometry.location,
+        title: tstring,
+      });
+
+      google.maps.event.addListener(marker, "click", () => {
+        infowindow.setContent(place.name || "");
+        infowindow.open(map);
+      });
+    }
+
+    window.initMap = initMap;
+  /*]]>*/
+</script>
