@@ -30,7 +30,7 @@
                     <th>Motor Vehicle Incident?</th>
                     <th>Neighbourhood</th>
                     <th>Call Time</th>
-                    <!--        <th>Units Dispatched</th>-->
+                    <th>Units Dispatched</th>
                     <th>Ward</th>
                     <th>Incident Number</th>
                 </tr>
@@ -39,6 +39,7 @@
                     <td><span th:text="${data.IS_MOTOR}"></span></td>
                     <td><span th:text="${data.NEIGHBOURHOOD}"></span></td>
                     <td><span th:text="${data.CALL_TIME}"></span></td>
+                    <td><span th:text="${data.UNITS}"></span></td>
                     <td><span th:text="${data.WARD}"></span></td>
                     <td><span th:text="${data.INCIDENT_NUMBER}"></span></td>
                 </tr>
@@ -78,7 +79,8 @@
         service.findPlaceFromQuery(request, (results, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && results) {
             for (let i = 0; i < results.length; i++) {
-              createMarker(results[i], "asdf");
+                var message = /*[[${neighbourhoodList}]]*/ 'default';
+                createMarker(results[i], "asdf");
             }
 
           }

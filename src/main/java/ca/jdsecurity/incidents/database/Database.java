@@ -32,8 +32,11 @@ public class Database {
     public void createIncidentsTable() throws SQLException {
         log.info("Creating Incident Table");
         Statement statement = con.createStatement();
-        statement.execute("DROP Table incidents");
-        String sql = "CREATE TABLE incidents (incident_number VARCHAR(255) PRIMARY KEY,incident_type VARCHAR(255),is_motor VARCHAR(255),neighbourhood VARCHAR(255),ward VARCHAR(255), call_time VARCHAR(255))";
+        try{
+            statement.execute("DROP Table incidents");
+        }
+        catch(Exception e){}
+        String sql = "CREATE TABLE incidents (incident_number VARCHAR(255) PRIMARY KEY,incident_type VARCHAR(255),is_motor VARCHAR(255),units VARCHAR(255),neighbourhood VARCHAR(255),ward VARCHAR(255), call_time VARCHAR(255))";
 		statement.execute(sql);
 
     }
@@ -46,14 +49,15 @@ public class Database {
         List<HashMap<String, Object>> incidentListing = this.cityOfWinnipegService.getAllIncidents();
         for(Map<String,Object> incident: incidentListing){
             PreparedStatement preparedStatement = con.prepareStatement(
-                    "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             preparedStatement.setString(1, (String) incident.get("incident_number"));
             preparedStatement.setString(2, (String) incident.get("incident_type"));
             preparedStatement.setString(3, (String) incident.get("motor_vehicle_incident"));
-            preparedStatement.setString(4, (String) incident.get("neighbourhood"));
-            preparedStatement.setString(5, (String) incident.get("ward"));
-            preparedStatement.setString(6, (String) incident.get("call_time"));
+            preparedStatement.setString(4, (String) incident.get("units"));
+            preparedStatement.setString(5, (String) incident.get("neighbourhood"));
+            preparedStatement.setString(6, (String) incident.get("ward"));
+            preparedStatement.setString(7, (String) incident.get("call_time"));
             preparedStatement.execute();
         }
         log.info("City of Winnipeg Incident Sync Completed");
