@@ -55,7 +55,11 @@
     /*<![CDATA[*/
 
     var message = /*[[${neighbourhoodList}]]*/ 'default';
-    console.log(message);
+    var message1 = /*[[${incidents}]]*/ 'default';
+
+    for (let i = 0; i < message1.length; i++) {
+
+    }
 
     function initMap() {
       const winnipeg = new google.maps.LatLng(49.895, -97.139);
@@ -69,25 +73,25 @@
 
       service = new google.maps.places.PlacesService(map);
       for (let i = 0; i < message.length; i++) {
-
-
-
+          let jstring = JSON.stringify(message1[i]);
+          let incparse = JSON.parse(jstring);
         const request = {
-          query: message[i] + " Winnipeg",
+          query: incparse.NEIGHBOURHOOD + " Winnipeg",
           fields: ["name", "geometry"],
         };
         service.findPlaceFromQuery(request, (results, status) => {
           if (status === google.maps.places.PlacesServiceStatus.OK && results) {
             for (let i = 0; i < results.length; i++) {
-                var message = /*[[${neighbourhoodList}]]*/ 'default';
-                createMarker(results[i], "asdf");
+                var units = incparse.UNITS ?? "No Response";
+                var title = "Incident Type: " + incparse.INCIDENT_TYPE + "\nNeighbourhood: " + incparse.NEIGHBOURHOOD + "\nUnits: " + units;
+                createMarker(results[i], title);
             }
 
           }
 
         });
       }
-    };
+    }
 
     function createMarker(place, tstring) {
       if (!place.geometry || !place.geometry.location) return;
