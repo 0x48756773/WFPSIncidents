@@ -31,6 +31,7 @@ public class AppController {
     String cityOfWinnipegQuery;
     CityOfWinnipegService cityOfWinnipegService;
 
+
     @PostConstruct
     public void initialize() throws SQLException, UnirestException, JsonProcessingException {
         this.cityOfWinnipegSecret = env.getProperty("secret.cityOfWinnipeg");

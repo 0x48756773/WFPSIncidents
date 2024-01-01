@@ -16,5 +16,6 @@ public class RequestLoggingFilterConfig {
         filter.setIncludeHeaders(true);
         filter.setAfterMessagePrefix("REQUEST DATA: ");
         return filter;
+
     }
 }

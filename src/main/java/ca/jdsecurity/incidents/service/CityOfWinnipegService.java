@@ -32,7 +32,6 @@ public class CityOfWinnipegService {
         this.cityOfWinipegPath = cityOfWinipegPath;
         this.cityOfWinnipegQuery = cityOfWinnipegQuery;
     }
-
     public List<HashMap<String, Object>> getAllIncidents() throws JsonProcessingException, UnirestException {
         log.info("Retrieving Incidents from City of Winnipeg");
         HttpResponse<JsonNode> jsonResponse

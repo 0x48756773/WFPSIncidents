@@ -31,7 +31,6 @@ public class ScheduledTasks {
     String cityOfWinnipegQuery;
     CityOfWinnipegService cityOfWinnipegService;
 
-
     private static final Logger log = LoggerFactory.getLogger(ScheduledTasks.class);
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");

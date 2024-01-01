@@ -24,7 +24,6 @@ public class Database {
         createIncidentsTable();
     }
 
-
     public Connection getConnection() throws SQLException {
         String urlConnection = "jdbc:derby:incidents;create=true";
         return DriverManager.getConnection(urlConnection);
