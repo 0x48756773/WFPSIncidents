@@ -3,15 +3,16 @@
 
 <head>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCw9hmr5G76O7-3yShu9BJE7bjm-opmV9o&callback=initMap&libraries=places&v=weekly"
-            defer></script>
+    <script>(g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
+    ({key: "AIzaSyCw9hmr5G76O7-3yShu9BJE7bjm-opmV9o", v: "weekly"});</script>
+    <script src="https://use.fontawesome.com/releases/v6.2.0/js/all.js"></script>
 
     <meta charset="UTF-8">
     <title>Title</title>
 
 
     <link rel="stylesheet" href="https://bootswatch.com/5/minty/bootstrap.css" />
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 
 <body>
@@ -52,62 +53,180 @@
 </html>
 
 <script th:inline="javascript">
-    /*<![CDATA[*/
-
-    var message = /*[[${neighbourhoodList}]]*/ 'default';
+    let map;
+    let infowindow;
     var message1 = /*[[${incidents}]]*/ 'default';
 
-    for (let i = 0; i < message1.length; i++) {
 
-    }
-
-    function initMap() {
-      const winnipeg = new google.maps.LatLng(49.895, -97.139);
-
-
-      infowindow = new google.maps.InfoWindow();
-      map = new google.maps.Map(document.getElementById("map"), {
-        center: winnipeg,
-        zoom: 12,
-      });
-
-      service = new google.maps.places.PlacesService(map);
-      for (let i = 0; i < message.length; i++) {
-          let jstring = JSON.stringify(message1[i]);
-          let incparse = JSON.parse(jstring);
-        const request = {
-          query: incparse.NEIGHBOURHOOD + " Winnipeg",
-          fields: ["name", "geometry"],
-        };
-        service.findPlaceFromQuery(request, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            for (let i = 0; i < results.length; i++) {
-                var units = incparse.UNITS ?? "No Response";
-                var title = "Incident Type: " + incparse.INCIDENT_TYPE + "\nNeighbourhood: " + incparse.NEIGHBOURHOOD + "\nUnits: " + units;
-                createMarker(results[i], title);
-            }
-
-          }
-
+    async function initMap() {
+        // Request needed libraries.
+        const { Map } = await google.maps.importLibrary("maps");
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        const {PlacesService} = await google.maps.importLibrary("places")
+        const center = { lat: 49.8536638, lng: -97.3176417 };
+        const map = new Map(document.getElementById("map"), {
+            zoom: 11,
+            center,
+            mapId: "4504f8b37365c3d0",
         });
-      }
+
+
+        service = new google.maps.places.PlacesService(map);
+        for (let i = 0; i < message1.length; i++) {
+            let jstring = JSON.stringify(message1[i]);
+            let incparse = JSON.parse(jstring);
+            const request = {
+                query: incparse.NEIGHBOURHOOD + " Winnipeg",
+                fields: ["name", "geometry"],
+            };
+            service.findPlaceFromQuery(request, (results, status) => {
+                for (let i = 0; i < results.length; i++) {
+                    let rstring = JSON.stringify(results[i]);
+                    let resparse = JSON.parse(rstring);
+                    var units = incparse.UNITS ?? "No Response";
+                    var ictype = "truck-medical";
+                    switch(incparse.INCIDENT_TYPE){
+                        case "Medical Response":
+                            ictype = "truck-medical";
+                            break;
+                        case "Fire Rescue - Alarm":
+                            ictype = "house-fire";
+                            break;
+                        case "Fire Rescue - Structure Fire":
+                            ictype = "house-fire";
+                            break;
+                        case "Fire Rescue - Rescue":
+                            ictype = "house-fire";
+                            break;
+                        case "Fire Rescue - Outdoor":
+                            ictype = "house-fire";
+                            break;
+                        case "Fire Rescue - Other":
+                            ictype = "house-fire";
+                            break;
+                        case "Fire Rescue - Hazmat":
+                            ictype = "biohazard";
+                            break;
+                    }
+                    build = {address: incparse.NEIGHBOURHOOD,description: incparse.INCIDENT_TYPE,type: ictype,position:{lat: resparse.geometry.location.lat, lng: resparse.geometry.location.lng},units: units,};
+                    const AdvancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
+                        map,
+                        content: buildContent(build),
+                        position: build.position,
+                        title: build.description,
+                    })
+                    AdvancedMarkerElement.addListener("click", () => {
+                        toggleHighlight(AdvancedMarkerElement, build);
+                    });
+
+                }
+            })
+
+        }
     }
 
-    function createMarker(place, tstring) {
-      if (!place.geometry || !place.geometry.location) return;
-
-      const marker = new google.maps.Marker({
-        map,
-        position: place.geometry.location,
-        title: tstring,
-      });
-
-      google.maps.event.addListener(marker, "click", () => {
-        infowindow.setContent(place.name || "");
-        infowindow.open(map);
-      });
+    function toggleHighlight(markerView, incident) {
+        if (markerView.content.classList.contains("highlight")) {
+            markerView.content.classList.remove("highlight");
+            markerView.zIndex = null;
+        } else {
+            markerView.content.classList.add("highlight");
+            markerView.zIndex = 1;
+        }
     }
 
-    window.initMap = initMap;
-  /*]]>*/
+    function buildContent(incident) {
+        const content = document.createElement("div");
+
+        content.classList.add("incident");
+        content.innerHTML = `
+    <div class="icon">
+        <i aria-hidden="true" class="fa fa-icon fa-${incident.type}" title="${incident.description}"></i>
+        <span class="fa-sr-only">${incident.type}</span>
+    </div>
+    <div class="details">
+        <div class="type">${incident.description}</div>
+        <div class="address">${incident.address}</div>
+        <div class="features">
+        <div>
+            <i aria-hidden="true" class="fa fa-truck fa-lg truck" title="Units"></i>
+            <span class="fa-sr-only">Units</span>
+            <span>${incident.units}</span>
+        </div>
+        </div>
+    </div>
+    `;
+        return content;
+    }
+
+    const incidents = [
+        {
+            address: "Shaughnessy Park",
+            description: "House Fire",
+            type: "house-fire",
+            position: {lat: 49.9286529, lng: -97.1806239},
+            units: "R5, R6, E6, E17",
+        }
+    ]
+
+    initMap();
 </script>
+
+
+<!--<script th:inline="javascript">-->
+<!--    /*<![CDATA[*/-->
+
+<!--    var message = /*[[${neighbourhoodList}]]*/ 'default';-->
+<!--    var message1 = /*[[${incidents}]]*/ 'default';-->
+
+
+<!--    function initMap() {-->
+<!--      const winnipeg = new google.maps.LatLng(49.895, -97.139);-->
+
+
+<!--      infowindow = new google.maps.InfoWindow();-->
+<!--      map = new google.maps.Map(document.getElementById("map"), {-->
+<!--        center: winnipeg,-->
+<!--        zoom: 12,-->
+<!--      });-->
+
+<!--      service = new google.maps.places.PlacesService(map);-->
+<!--      for (let i = 0; i < message.length; i++) {-->
+<!--          let jstring = JSON.stringify(message1[i]);-->
+<!--          let incparse = JSON.parse(jstring);-->
+<!--        const request = {-->
+<!--          query: incparse.NEIGHBOURHOOD + " Winnipeg",-->
+<!--          fields: ["name", "geometry"],-->
+<!--        };-->
+<!--        service.findPlaceFromQuery(request, (results, status) => {-->
+<!--          if (status === google.maps.places.PlacesServiceStatus.OK && results) {-->
+<!--            for (let i = 0; i < results.length; i++) {-->
+<!--                var units = incparse.UNITS ?? "No Response";-->
+<!--                var title = "Incident Type: " + incparse.INCIDENT_TYPE + "\nNeighbourhood: " + incparse.NEIGHBOURHOOD + "\nUnits: " + units;-->
+<!--                createMarker(results[i], title);-->
+<!--            }-->
+
+<!--          }-->
+
+<!--        });-->
+<!--      }-->
+<!--    }-->
+
+<!--    function createMarker(place, tstring) {-->
+<!--      if (!place.geometry || !place.geometry.location) return;-->
+
+<!--      const marker = new google.maps.Marker({-->
+<!--        map,-->
+<!--        position: place.geometry.location,-->
+<!--        title: tstring,-->
+<!--      });-->
+
+<!--      google.maps.event.addListener(marker, "click", () => {-->
+<!--        infowindow.setContent(place.name || "");-->
+<!--        infowindow.open(map);-->
+<!--      });-->
+<!--    }-->
+
+<!--    window.initMap = initMap;-->
+<!--  /*]]>*/-->
+<!--</script>-->
