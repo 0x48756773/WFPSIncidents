@@ -45,7 +45,7 @@ public class ScheduledTasks {
         this.cityOfWinnipegService = new CityOfWinnipegService(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
         this.database = new Database(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
     }
-    @Scheduled(cron = "0 */10 * * * ?")
+    @Scheduled(cron = "0 */5 * * * ?")
     public void reportCurrentTime() throws SQLException, UnirestException, JsonProcessingException {
         database.syncIncidentsTable();
     }
