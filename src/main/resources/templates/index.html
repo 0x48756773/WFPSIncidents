@@ -96,7 +96,7 @@
                             ictype = "house-fire";
                             break;
                         case "Fire Rescue - Rescue":
-                            ictype = "house-fire";
+                            ictype = "helmet-safety";
                             break;
                         case "Fire Rescue - Outdoor":
                             ictype = "house-fire";
@@ -106,6 +106,12 @@
                             break;
                         case "Fire Rescue - Hazmat":
                             ictype = "biohazard";
+                            break;
+                        case "Fire Rescue – Train / Rail Emergency":
+                            ictype = "train";
+                            break;
+                        case "Fire Rescue – Aircraft Emergency":
+                            ictype = "plane";
                             break;
                     }
                     build = {address: incparse.NEIGHBOURHOOD,description: incparse.INCIDENT_TYPE,type: ictype,position:{lat: resparse.geometry.location.lat, lng: resparse.geometry.location.lng},units: units,};

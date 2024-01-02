@@ -131,18 +131,6 @@ body {
     height: 50px;
 }
 
-.incident .bed {
-    color: #FFA000;
-}
-
-.incident .bath {
-    color: #03A9F4;
-}
-
-.incident .size {
-    color: #388E3C;
-}
-
 /*
  * Fire icon colors.
  */
@@ -186,4 +174,46 @@ body {
 
 .incident:not(.highlight):has(.fa-biohazard)::after {
     border-top: 9px solid var(--hazmat-color);
+}
+/*
+ * Train icon colors.
+ */
+.incident.highlight:has(.fa-train) .icon {
+    color: var(--fire-color);
+}
+
+.incident:not(.highlight):has(.fa-train) {
+    background-color: var(--fire-color);
+}
+
+.incident:not(.highlight):has(.fa-train)::after {
+    border-top: 9px solid var(--fire-color);
+}
+/*
+ * Airplane icon colors.
+ */
+.incident.highlight:has(.fa-plane) .icon {
+    color: var(--fire-color);
+}
+
+.incident:not(.highlight):has(.fa-plane) {
+    background-color: var(--fire-color);
+}
+
+.incident:not(.highlight):has(.fa-plane)::after {
+    border-top: 9px solid var(--fire-color);
+}
+/*
+ * Rescue icon colors.
+ */
+.incident.highlight:has(.fa-helmet-safety) .icon {
+    color: var(--fire-color);
+}
+
+.incident:not(.highlight):has(.fa-helmet-safety) {
+    background-color: var(--fire-color);
+}
+
+.incident:not(.highlight):has(.fa-helmet-safety)::after {
+    border-top: 9px solid var(--fire-color);
 }
