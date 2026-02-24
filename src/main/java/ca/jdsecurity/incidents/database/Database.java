@@ -56,20 +56,14 @@ public class Database {
         try (PreparedStatement preparedStatement = con.prepareStatement(
                 "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?)"
         )) {
-            LocalDate todayInWinnipeg = LocalDate.now(ZoneId.of("America/Winnipeg"));
             for (Map<String, Object> incident : incidentListing) {
-                String callTime = (String) incident.get("call_time");
-                if (!isTodayOrFuture(callTime, todayInWinnipeg)) {
-                    continue;
-                }
-
                 preparedStatement.setString(1, (String) incident.get("incident_number"));
                 preparedStatement.setString(2, (String) incident.get("incident_type"));
                 preparedStatement.setString(3, (String) incident.get("motor_vehicle_incident"));
                 preparedStatement.setString(4, (String) incident.get("units"));
                 preparedStatement.setString(5, (String) incident.get("neighbourhood"));
                 preparedStatement.setString(6, (String) incident.get("ward"));
-                preparedStatement.setString(7, callTime);
+                preparedStatement.setString(7, (String) incident.get("call_time"));
                 preparedStatement.execute();
             }
         }

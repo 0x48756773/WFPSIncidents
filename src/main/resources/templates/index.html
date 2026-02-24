@@ -96,23 +96,10 @@
         return coordinates;
     }
 
-    async function buildNeighbourhoodCoordinateIndex() {
-        const neighbourhoods = [...new Set(
-            incidents
-                .map((incident) => incident.NEIGHBOURHOOD)
-                .filter((neighbourhood) => neighbourhood)
-        )];
-
-        await Promise.all(neighbourhoods.map(async (neighbourhood) => {
-            await geocodeNeighbourhood(neighbourhood);
-        }));
-    }
-
     async function plotIncidents() {
-        await buildNeighbourhoodCoordinateIndex();
-
         for (const incident of incidents) {
-            const coordinates = neighbourhoodCoordinatesCache[incident.NEIGHBOURHOOD];
+            const neighbourhood = incident.NEIGHBOURHOOD;
+            const coordinates = await geocodeNeighbourhood(neighbourhood);
             if (!coordinates) {
                 continue;
             }
