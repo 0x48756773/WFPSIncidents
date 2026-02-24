@@ -7,6 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +69,27 @@ public class Database {
         }
         log.info("City of Winnipeg Incident Sync Completed");
 
+    }
+
+    private boolean isTodayOrFuture(String callTime, LocalDate todayInWinnipeg) {
+        if (callTime == null || callTime.isBlank()) {
+            return false;
+        }
+
+        try {
+            return !OffsetDateTime.parse(callTime).atZoneSameInstant(ZoneId.of("America/Winnipeg")).toLocalDate().isBefore(todayInWinnipeg);
+        } catch (DateTimeParseException e) {
+            // Fallback for non-ISO values returned by the endpoint
+            if (callTime.length() >= 10) {
+                try {
+                    LocalDate parsed = LocalDate.parse(callTime.substring(0, 10));
+                    return !parsed.isBefore(todayInWinnipeg);
+                } catch (DateTimeParseException ignored) {
+                    return false;
+                }
+            }
+            return false;
+        }
     }
 
     public List<HashMap<String, Object>> getAllIncidentsFromToday() throws SQLException {
