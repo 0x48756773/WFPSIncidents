@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://use.fontawesome.com/releases/v6.2.0/js/all.js"></script>
@@ -47,9 +46,6 @@
         </div>
     </div>
 </div>
-</body>
-
-</html>
 
 <script th:inline="javascript">
     const incidents = /*[[${incidents}]]*/ [];
@@ -61,6 +57,25 @@
     }).addTo(map);
 
     const neighbourhoodCoordinatesCache = {};
+    const geocodeFailures = new Set();
+    const wardCentres = {
+        'Assiniboia': [49.8573, -97.2835],
+        'Charleswood - Tuxedo - Westwood': [49.8569, -97.2525],
+        'Daniel McIntyre': [49.9022, -97.1687],
+        'Elmwood - East Kildonan': [49.9307, -97.0708],
+        'Fort Garry': [49.8232, -97.1520],
+        'Mynarski': [49.9290, -97.1483],
+        'North Kildonan': [49.9545, -97.0671],
+        'Old Kildonan': [49.9760, -97.1128],
+        'Point Douglas': [49.9077, -97.1150],
+        'River Heights - Fort Garry': [49.8584, -97.1748],
+        'St. Boniface': [49.8864, -97.1080],
+        'St. James': [49.8857, -97.2147],
+        'St. Norbert - Seine River': [49.7707, -97.1543],
+        'St. Vital': [49.8344, -97.1118],
+        'Transcona': [49.8966, -97.0010],
+        'Waverley West': [49.7927, -97.1854]
+    };
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>'"]/g, (char) => ({
@@ -72,6 +87,22 @@
         }[char]));
     }
 
+    function jitterCoordinates(baseCoordinates, seedText) {
+        if (!baseCoordinates) {
+            return null;
+        }
+
+        let hash = 0;
+        for (const character of String(seedText ?? '')) {
+            hash = ((hash << 5) - hash) + character.charCodeAt(0);
+            hash |= 0;
+        }
+
+        const latJitter = ((hash & 15) - 8) * 0.0007;
+        const lngJitter = (((hash >> 4) & 15) - 8) * 0.0007;
+        return [baseCoordinates[0] + latJitter, baseCoordinates[1] + lngJitter];
+    }
+
     async function geocodeNeighbourhood(neighbourhoodName) {
         if (!neighbourhoodName) {
             return null;
@@ -79,27 +110,51 @@
         if (neighbourhoodCoordinatesCache[neighbourhoodName]) {
             return neighbourhoodCoordinatesCache[neighbourhoodName];
         }
+        if (geocodeFailures.has(neighbourhoodName)) {
+            return null;
+        }
 
         const query = encodeURIComponent(`${neighbourhoodName}, Winnipeg, Manitoba, Canada`);
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${query}`);
-        if (!response.ok) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${query}`);
+            if (!response.ok) {
+                geocodeFailures.add(neighbourhoodName);
+                return null;
+            }
+
+            const results = await response.json();
+            if (!results.length) {
+                geocodeFailures.add(neighbourhoodName);
+                return null;
+            }
+
+            const coordinates = [parseFloat(results[0].lat), parseFloat(results[0].lon)];
+            neighbourhoodCoordinatesCache[neighbourhoodName] = coordinates;
+            return coordinates;
+        } catch (error) {
+            geocodeFailures.add(neighbourhoodName);
             return null;
         }
+    }
 
-        const results = await response.json();
-        if (!results.length) {
-            return null;
+    async function getIncidentCoordinates(incident) {
+        const neighbourhood = incident.NEIGHBOURHOOD;
+        const geocodedCoordinates = await geocodeNeighbourhood(neighbourhood);
+        if (geocodedCoordinates) {
+            return jitterCoordinates(geocodedCoordinates, incident.INCIDENT_NUMBER);
         }
 
-        const coordinates = [parseFloat(results[0].lat), parseFloat(results[0].lon)];
-        neighbourhoodCoordinatesCache[neighbourhoodName] = coordinates;
-        return coordinates;
+        const wardCoordinates = wardCentres[incident.WARD];
+        if (wardCoordinates) {
+            return jitterCoordinates(wardCoordinates, incident.INCIDENT_NUMBER);
+        }
+
+        return null;
     }
 
     async function plotIncidents() {
         for (const incident of incidents) {
-            const neighbourhood = incident.NEIGHBOURHOOD;
-            const coordinates = await geocodeNeighbourhood(neighbourhood);
+            const coordinates = await getIncidentCoordinates(incident);
             if (!coordinates) {
                 continue;
             }
@@ -122,3 +177,5 @@
 
     plotIncidents();
 </script>
+</body>
+</html>
