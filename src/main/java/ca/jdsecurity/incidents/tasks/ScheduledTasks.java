@@ -25,7 +25,6 @@ public class ScheduledTasks {
     @Autowired
     private Environment env;
     String cityOfWinnipegSecret;
-    String googleApiKey;
     String cityOfWinnipegHost;
     String cityOfWinnipegPath;
     String cityOfWinnipegQuery;
@@ -38,7 +37,6 @@ public class ScheduledTasks {
     @PostConstruct
     public void initialize() throws SQLException, UnirestException, JsonProcessingException {
         this.cityOfWinnipegSecret = env.getProperty("secret.cityOfWinnipeg");
-        this.googleApiKey = env.getProperty("secret.googleMaps");
         this.cityOfWinnipegHost = env.getProperty("endpoint.cityOfWinnipeg.host");
         this.cityOfWinnipegPath = env.getProperty("endpoint.cityOfWinnipeg.path");
         this.cityOfWinnipegQuery = env.getProperty("endpoint.cityOfWinnipeg.query");
