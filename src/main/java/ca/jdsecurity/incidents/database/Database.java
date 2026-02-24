@@ -7,9 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.time.LocalDate;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,13 +59,18 @@ public class Database {
                 "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?)"
         )) {
             for (Map<String, Object> incident : incidentListing) {
+                String callTime = (String) incident.get("call_time");
+                if (!isWithinLast24Hours(callTime, ZoneId.of("America/Winnipeg"))) {
+                    continue;
+                }
+
                 preparedStatement.setString(1, (String) incident.get("incident_number"));
                 preparedStatement.setString(2, (String) incident.get("incident_type"));
                 preparedStatement.setString(3, (String) incident.get("motor_vehicle_incident"));
                 preparedStatement.setString(4, (String) incident.get("units"));
                 preparedStatement.setString(5, (String) incident.get("neighbourhood"));
                 preparedStatement.setString(6, (String) incident.get("ward"));
-                preparedStatement.setString(7, (String) incident.get("call_time"));
+                preparedStatement.setString(7, callTime);
                 preparedStatement.execute();
             }
         }
@@ -71,25 +78,26 @@ public class Database {
 
     }
 
-    private boolean isTodayOrFuture(String callTime, LocalDate todayInWinnipeg) {
+    private boolean isWithinLast24Hours(String callTime, ZoneId zoneId) {
         if (callTime == null || callTime.isBlank()) {
             return false;
         }
 
         try {
-            return !OffsetDateTime.parse(callTime).atZoneSameInstant(ZoneId.of("America/Winnipeg")).toLocalDate().isBefore(todayInWinnipeg);
+            return isWithinDuration(OffsetDateTime.parse(callTime).atZoneSameInstant(zoneId), zoneId);
         } catch (DateTimeParseException e) {
-            // Fallback for non-ISO values returned by the endpoint
-            if (callTime.length() >= 10) {
-                try {
-                    LocalDate parsed = LocalDate.parse(callTime.substring(0, 10));
-                    return !parsed.isBefore(todayInWinnipeg);
-                } catch (DateTimeParseException ignored) {
-                    return false;
-                }
+            try {
+                return isWithinDuration(LocalDateTime.parse(callTime).atZone(zoneId), zoneId);
+            } catch (DateTimeParseException ignored) {
+                return false;
             }
-            return false;
         }
+    }
+
+    private boolean isWithinDuration(ZonedDateTime callDateTime, ZoneId zoneId) {
+        ZonedDateTime now = ZonedDateTime.now(zoneId);
+        Duration age = Duration.between(callDateTime, now);
+        return !age.isNegative() && age.compareTo(Duration.ofHours(24)) <= 0;
     }
 
     public List<HashMap<String, Object>> getAllIncidentsFromToday() throws SQLException {
