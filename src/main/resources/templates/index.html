@@ -22,6 +22,16 @@
         <div class="col-12 col-xl-7">
             <div id="map" class="map-panel"></div>
 
+    <details class="incident-table-panel" open>
+        <summary class="incident-table-toggle">
+            <span>Active Incident Table</span>
+            <span class="incident-table-toggle-hint">Tap or click to collapse</span>
+        </summary>
+
+        <div class="incident-legend">
+            <span class="incident-chip incident-chip-fire">Fire Rescue</span>
+            <span class="incident-chip incident-chip-medical">Medical Response</span>
+            <span class="incident-chip incident-chip-other">Other Calls</span>
         </div>
         <div class="col-12 col-xl-5">
             <div class="incident-legend">
@@ -63,7 +73,7 @@
                 </table>
             </div>
         </div>
-    </div>
+    </details>
 </div>
 
 <script th:inline="javascript">
