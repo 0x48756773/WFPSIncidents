@@ -19,6 +19,11 @@ body {
     padding: 0;
 }
 
+.app-shell {
+    min-height: 100vh;
+    padding-bottom: 1rem;
+}
+
 .page-title {
     margin: 0.75rem 0;
     text-align: center;
@@ -26,13 +31,30 @@ body {
 
 .map-panel {
     width: 100%;
-    height: 55vh;
-    min-height: 20rem;
+    height: min(72vh, 52rem);
+    min-height: 24rem;
     border-radius: 0.5rem;
 }
 
+.incident-table-panel {
+    margin-top: 0.5rem;
+}
+
+.incident-table-toggle {
+    color: #6c757d;
+    cursor: pointer;
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.incident-table-toggle-hint {
+    color: #6c757d;
+}
+
 .incident-table-wrapper {
-    max-height: 88vh;
+    max-height: clamp(16rem, 34vh, 30rem);
     background-color: #fff;
     border-radius: 0.5rem;
     overflow: auto;
@@ -109,13 +131,16 @@ body {
  * that contains the map.
  */
 #map {
-    height: 100%;
     width: 100%;
 }
 
 @media (min-width: 1200px) {
     .map-panel {
-        height: 88vh;
+        height: min(74vh, 56rem);
+    }
+
+    .incident-table-wrapper {
+        max-height: clamp(18rem, 28vh, 24rem);
     }
 }
 
