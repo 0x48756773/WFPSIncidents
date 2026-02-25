@@ -7,6 +7,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>WFPS Incidents</title>
 
     <link rel="stylesheet" href="https://bootswatch.com/5/minty/bootstrap.css" />
@@ -16,33 +17,51 @@
 <body>
 <div class="container-fluid">
 
-    <div class="row">
-        <div class="col-md-6">
-            <h1 style="text-align:center">WFPS Active Incident Map:</h1>
-            <div id="map" style="width: 100%; height: 100vh"></div>
+    <h1 class="page-title">WFPS Active Incident Map</h1>
+    <div class="row g-3 align-items-start">
+        <div class="col-12 col-xl-7">
+            <div id="map" class="map-panel"></div>
 
         </div>
-        <div class="col-md-6">
-            <table class="table table-hover">
-                <tr>
-                    <th>Incident Type</th>
-                    <th>Motor Vehicle Incident?</th>
-                    <th>Neighbourhood</th>
-                    <th>Call Time</th>
-                    <th>Units Dispatched</th>
-                    <th>Ward</th>
-                    <th>Incident Number</th>
-                </tr>
-                <tr th:each="data: ${incidents}">
-                    <td><span th:text="${data.INCIDENT_TYPE}"></span></td>
-                    <td><span th:text="${data.IS_MOTOR}"></span></td>
-                    <td><span th:text="${data.NEIGHBOURHOOD}"></span></td>
-                    <td><span th:text="${data.CALL_TIME}"></span></td>
-                    <td><span th:text="${data.UNITS}"></span></td>
-                    <td><span th:text="${data.WARD}"></span></td>
-                    <td><span th:text="${data.INCIDENT_NUMBER}"></span></td>
-                </tr>
-            </table>
+        <div class="col-12 col-xl-5">
+            <div class="incident-legend">
+                <span class="incident-chip incident-chip-fire">Fire Rescue</span>
+                <span class="incident-chip incident-chip-medical">Medical Response</span>
+                <span class="incident-chip incident-chip-other">Other Calls</span>
+            </div>
+            <div class="table-responsive incident-table-wrapper">
+                <table class="table table-hover incident-table">
+                    <thead>
+                    <tr>
+                        <th>Incident Type</th>
+                        <th>Category</th>
+                        <th>Motor Vehicle Incident?</th>
+                        <th>Neighbourhood</th>
+                        <th>Call Time</th>
+                        <th>Units Dispatched</th>
+                        <th>Ward</th>
+                        <th>Incident Number</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="data: ${incidents}"
+                        th:with="incidentType=${data.INCIDENT_TYPE != null ? data.INCIDENT_TYPE.toLowerCase() : ''}, incidentCategory=${#strings.startsWith(incidentType, 'fire rescue') ? 'fire' : (#strings.contains(incidentType, 'medical response') ? 'medical' : 'other')}"
+                        th:classappend="|incident-row incident-row-${incidentCategory}|">
+                        <td data-label="Incident Type"><span th:text="${data.INCIDENT_TYPE}"></span></td>
+                        <td data-label="Category"><span class="badge"
+                                                      th:classappend="| incident-badge incident-badge-${incidentCategory}|"
+                                                      th:text="${incidentCategory == 'fire' ? 'Fire Rescue' : (incidentCategory == 'medical' ? 'Medical Response' : 'Other')}"
+                        ></span></td>
+                        <td data-label="Motor Vehicle Incident?"><span th:text="${data.IS_MOTOR}"></span></td>
+                        <td data-label="Neighbourhood"><span th:text="${data.NEIGHBOURHOOD}"></span></td>
+                        <td data-label="Call Time"><span th:text="${data.CALL_TIME}"></span></td>
+                        <td data-label="Units Dispatched"><span th:text="${data.UNITS}"></span></td>
+                        <td data-label="Ward"><span th:text="${data.WARD}"></span></td>
+                        <td data-label="Incident Number"><span th:text="${data.INCIDENT_NUMBER}"></span></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -85,6 +104,28 @@
             "'": '&#39;',
             '"': '&quot;'
         }[char]));
+    }
+
+    function getIncidentCategory(incidentType) {
+        const normalizedType = String(incidentType ?? '').toLowerCase();
+        if (normalizedType.startsWith('fire rescue')) {
+            return 'fire';
+        }
+        if (normalizedType.includes('medical response')) {
+            return 'medical';
+        }
+        return 'other';
+    }
+
+    function getCategoryColor(incidentType) {
+        switch (getIncidentCategory(incidentType)) {
+            case 'fire':
+                return '#dc3545';
+            case 'medical':
+                return '#0d6efd';
+            default:
+                return '#6c757d';
+        }
     }
 
     function jitterCoordinates(baseCoordinates, seedText) {
@@ -161,15 +202,18 @@
 
             const popup = `
                 <strong>${escapeHtml(incident.INCIDENT_TYPE)}</strong><br/>
+                Category: ${escapeHtml(getIncidentCategory(incident.INCIDENT_TYPE))}<br/>
                 Neighbourhood: ${escapeHtml(incident.NEIGHBOURHOOD)}<br/>
                 Units: ${escapeHtml(incident.UNITS ?? 'No Response')}<br/>
                 Call Time: ${escapeHtml(incident.CALL_TIME)}
             `;
 
+            const markerColor = getCategoryColor(incident.INCIDENT_TYPE);
+
             L.circleMarker(coordinates, {
                 radius: 7,
-                color: '#dc3545',
-                fillColor: '#dc3545',
+                color: markerColor,
+                fillColor: markerColor,
                 fillOpacity: 0.6
             }).addTo(map).bindPopup(popup);
         }
