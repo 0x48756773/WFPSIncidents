@@ -18,7 +18,9 @@
 <div class="container-fluid">
 
     <h1 class="page-title">WFPS Active Incident Map</h1>
-    <div id="map" class="map-panel"></div>
+    <div class="row g-3 align-items-start">
+        <div class="col-12 col-xl-7">
+            <div id="map" class="map-panel"></div>
 
     <details class="incident-table-panel" open>
         <summary class="incident-table-toggle">
@@ -31,39 +33,45 @@
             <span class="incident-chip incident-chip-medical">Medical Response</span>
             <span class="incident-chip incident-chip-other">Other Calls</span>
         </div>
-
-        <div class="table-responsive incident-table-wrapper">
-            <table class="table table-hover incident-table">
-                <thead>
-                <tr>
-                    <th>Incident Type</th>
-                    <th>Category</th>
-                    <th>Motor Vehicle Incident?</th>
-                    <th>Neighbourhood</th>
-                    <th>Call Time</th>
-                    <th>Units Dispatched</th>
-                    <th>Ward</th>
-                    <th>Incident Number</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="data: ${incidents}"
-                    th:with="incidentType=${data.INCIDENT_TYPE != null ? data.INCIDENT_TYPE.toLowerCase() : ''}, incidentCategory=${#strings.startsWith(incidentType, 'fire rescue') ? 'fire' : (#strings.contains(incidentType, 'medical response') ? 'medical' : 'other')}"
-                    th:classappend="|incident-row incident-row-${incidentCategory}|">
-                    <td data-label="Incident Type"><span th:text="${data.INCIDENT_TYPE}"></span></td>
-                    <td data-label="Category"><span class="badge"
-                                                  th:classappend="| incident-badge incident-badge-${incidentCategory}|"
-                                                  th:text="${incidentCategory == 'fire' ? 'Fire Rescue' : (incidentCategory == 'medical' ? 'Medical Response' : 'Other')}"
-                    ></span></td>
-                    <td data-label="Motor Vehicle Incident?"><span th:text="${data.IS_MOTOR}"></span></td>
-                    <td data-label="Neighbourhood"><span th:text="${data.NEIGHBOURHOOD}"></span></td>
-                    <td data-label="Call Time"><span th:text="${data.CALL_TIME}"></span></td>
-                    <td data-label="Units Dispatched"><span th:text="${data.UNITS}"></span></td>
-                    <td data-label="Ward"><span th:text="${data.WARD}"></span></td>
-                    <td data-label="Incident Number"><span th:text="${data.INCIDENT_NUMBER}"></span></td>
-                </tr>
-                </tbody>
-            </table>
+        <div class="col-12 col-xl-5">
+            <div class="incident-legend">
+                <span class="incident-chip incident-chip-fire">Fire Rescue</span>
+                <span class="incident-chip incident-chip-medical">Medical Response</span>
+                <span class="incident-chip incident-chip-other">Other Calls</span>
+            </div>
+            <div class="table-responsive incident-table-wrapper">
+                <table class="table table-hover incident-table">
+                    <thead>
+                    <tr>
+                        <th>Incident Type</th>
+                        <th>Category</th>
+                        <th>Motor Vehicle Incident?</th>
+                        <th>Neighbourhood</th>
+                        <th>Call Time</th>
+                        <th>Units Dispatched</th>
+                        <th>Ward</th>
+                        <th>Incident Number</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="data: ${incidents}"
+                        th:with="incidentType=${data.INCIDENT_TYPE != null ? data.INCIDENT_TYPE.toLowerCase() : ''}, incidentCategory=${#strings.startsWith(incidentType, 'fire rescue') ? 'fire' : (#strings.contains(incidentType, 'medical response') ? 'medical' : 'other')}"
+                        th:classappend="|incident-row incident-row-${incidentCategory}|">
+                        <td data-label="Incident Type"><span th:text="${data.INCIDENT_TYPE}"></span></td>
+                        <td data-label="Category"><span class="badge"
+                                                      th:classappend="| incident-badge incident-badge-${incidentCategory}|"
+                                                      th:text="${incidentCategory == 'fire' ? 'Fire Rescue' : (incidentCategory == 'medical' ? 'Medical Response' : 'Other')}"
+                        ></span></td>
+                        <td data-label="Motor Vehicle Incident?"><span th:text="${data.IS_MOTOR}"></span></td>
+                        <td data-label="Neighbourhood"><span th:text="${data.NEIGHBOURHOOD}"></span></td>
+                        <td data-label="Call Time"><span th:text="${data.CALL_TIME}"></span></td>
+                        <td data-label="Units Dispatched"><span th:text="${data.UNITS}"></span></td>
+                        <td data-label="Ward"><span th:text="${data.WARD}"></span></td>
+                        <td data-label="Incident Number"><span th:text="${data.INCIDENT_NUMBER}"></span></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </details>
 </div>
