@@ -19,6 +19,123 @@ body {
     padding: 0;
 }
 
+.page-title {
+    margin: 0.75rem 0;
+    text-align: center;
+}
+
+.map-panel {
+    width: 100%;
+    height: 70vh;
+    min-height: 24rem;
+    border-radius: 0.5rem;
+}
+
+.incident-table-panel {
+    margin-top: 1rem;
+}
+
+.incident-table-toggle {
+    align-items: baseline;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    list-style: none;
+    padding: 0.75rem 1rem;
+}
+
+.incident-table-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.incident-table-toggle-hint {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.incident-table-panel:not([open]) .incident-table-toggle-hint::after {
+    content: " (collapsed)";
+}
+
+.incident-table-wrapper {
+    max-height: 55vh;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    margin-top: 0.75rem;
+    overflow: auto;
+}
+
+.incident-table {
+    margin-bottom: 0;
+}
+
+.incident-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #f8f9fa;
+}
+
+.incident-row-fire {
+    border-left: 4px solid #dc3545;
+}
+
+.incident-row-medical {
+    border-left: 4px solid #0d6efd;
+}
+
+.incident-row-other {
+    border-left: 4px solid #6c757d;
+}
+
+.incident-badge {
+    font-weight: 600;
+}
+
+.incident-badge-fire {
+    background-color: #dc3545;
+}
+
+.incident-badge-medical {
+    background-color: #0d6efd;
+}
+
+.incident-badge-other {
+    background-color: #6c757d;
+}
+
+.incident-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.incident-chip {
+    border-radius: 1rem;
+    color: #fff;
+    display: inline-block;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.65rem;
+}
+
+.incident-chip-fire {
+    background-color: #dc3545;
+}
+
+.incident-chip-medical {
+    background-color: #0d6efd;
+}
+
+.incident-chip-other {
+    background-color: #6c757d;
+}
+
 /*
  * Always set the map height explicitly to define the size of the div element
  * that contains the map.
@@ -26,6 +143,70 @@ body {
 #map {
     height: 100%;
     width: 100%;
+}
+
+@media (min-width: 1200px) {
+    .map-panel {
+        height: 72vh;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .map-panel {
+        height: 50vh;
+        min-height: 18rem;
+    }
+
+    .incident-table-toggle {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .incident-table-wrapper {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .incident-table thead {
+        display: none;
+    }
+
+    .incident-table,
+    .incident-table tbody,
+    .incident-table tr,
+    .incident-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .incident-table tr {
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .incident-table td {
+        border: 0;
+        border-bottom: 1px solid #f1f3f5;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: space-between;
+        padding: 0.45rem 0;
+        text-align: right;
+    }
+
+    .incident-table td:last-child {
+        border-bottom: 0;
+    }
+
+    .incident-table td::before {
+        color: #495057;
+        content: attr(data-label);
+        font-weight: 600;
+        text-align: left;
+    }
 }
 
 /*
