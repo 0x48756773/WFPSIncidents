@@ -18,7 +18,15 @@
 <div class="container-fluid app-shell">
     <h1 class="page-title">WFPS Active Incident Map</h1>
 
-    <div id="map" class="map-panel"></div>
+    <div class="map-wrapper">
+        <div id="map" class="map-panel"></div>
+        <div id="map-loading" class="map-loading">
+            <div class="map-loading-inner">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                <span>Loading incidents&hellip;</span>
+            </div>
+        </div>
+    </div>
 
     <details class="incident-table-panel" open>
         <summary class="incident-table-toggle">
@@ -27,9 +35,10 @@
         </summary>
 
         <div class="incident-legend">
-            <span class="incident-chip incident-chip-fire">Fire Rescue</span>
-            <span class="incident-chip incident-chip-medical">Medical Response</span>
-            <span class="incident-chip incident-chip-other">Other Calls</span>
+            <button class="incident-chip incident-chip-fire filter-btn filter-btn-active" data-category="fire">Fire Rescue</button>
+            <button class="incident-chip incident-chip-medical filter-btn filter-btn-active" data-category="medical">Medical Response</button>
+            <button class="incident-chip incident-chip-other filter-btn filter-btn-active" data-category="other">Other Calls</button>
+            <span id="refresh-badge" class="refresh-badge"></span>
         </div>
 
         <div class="table-responsive incident-table-wrapper">
@@ -197,11 +206,44 @@
         return null;
     }
 
+    // --- State ---
     const markersByIncident = new Map();
+    const markersByCategory = { fire: [], medical: [], other: [] };
+    const activeCategories = new Set(['fire', 'medical', 'other']);
+
+    // --- Category filters ---
+    function applyFilters() {
+        for (const [category, markers] of Object.entries(markersByCategory)) {
+            markers.forEach(m => activeCategories.has(category) ? m.addTo(map) : m.remove());
+        }
+    }
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const cat = btn.dataset.category;
+            if (activeCategories.has(cat)) {
+                activeCategories.delete(cat);
+                btn.classList.remove('filter-btn-active');
+            } else {
+                activeCategories.add(cat);
+                btn.classList.add('filter-btn-active');
+            }
+            applyFilters();
+        });
+    });
+
+    // --- Plot ---
+    function clearHighlightedRow() {
+        document.querySelectorAll('tr.incident-row-selected').forEach(r => r.classList.remove('incident-row-selected'));
+    }
 
     async function plotIncidents() {
+        document.getElementById('map-loading').style.display = 'flex';
+
         const uniqueNeighbourhoods = [...new Set(incidents.map(i => i.NEIGHBOURHOOD).filter(Boolean))];
         await Promise.all(uniqueNeighbourhoods.map(n => geocodeNeighbourhood(n)));
+
+        const bounds = [];
 
         for (const incident of incidents) {
             const coordinates = await getIncidentCoordinates(incident);
@@ -209,6 +251,7 @@
                 continue;
             }
 
+            const category = getIncidentCategory(incident.INCIDENT_TYPE);
             const popup = `
                 <strong>${escapeHtml(incident.INCIDENT_TYPE)}</strong><br/>
                 Category: ${escapeHtml(getIncidentCategory(incident.INCIDENT_TYPE))}<br/>
@@ -226,7 +269,20 @@
                 fillOpacity: 0.6
             }).addTo(map).bindPopup(popup);
 
+            marker.on('click', () => {
+                clearHighlightedRow();
+                const row = document.querySelector(`tr[data-incident="${incident.INCIDENT_NUMBER}"]`);
+                if (row) {
+                    row.classList.add('incident-row-selected');
+                    const panel = document.querySelector('.incident-table-panel');
+                    if (panel && !panel.open) panel.open = true;
+                    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+
             markersByIncident.set(String(incident.INCIDENT_NUMBER), marker);
+            markersByCategory[category].push(marker);
+            bounds.push(coordinates);
         }
 
         document.querySelectorAll('tr[data-incident]').forEach(row => {
@@ -237,10 +293,39 @@
                 marker.openPopup();
                 marker.setStyle({ radius: 14, weight: 3 });
                 setTimeout(() => marker.setStyle({ radius: 7, weight: 1 }), 1500);
+                clearHighlightedRow();
+                row.classList.add('incident-row-selected');
             });
         });
+
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [30, 30] });
+        }
+
+        applyFilters();
+
+        document.getElementById('map-loading').style.display = 'none';
     }
 
+    // --- Auto-refresh countdown ---
+    const REFRESH_SECONDS = 5 * 60;
+    let countdown = REFRESH_SECONDS;
+    const refreshBadge = document.getElementById('refresh-badge');
+
+    function updateRefreshBadge() {
+        const m = Math.floor(countdown / 60);
+        const s = String(countdown % 60).padStart(2, '0');
+        refreshBadge.textContent = `Refreshing in ${m}:${s}`;
+    }
+
+    updateRefreshBadge();
+    setInterval(() => {
+        countdown--;
+        updateRefreshBadge();
+        if (countdown <= 0) location.reload();
+    }, 1000);
+
+    // --- Map resize ---
     const incidentPanel = document.querySelector('.incident-table-panel');
     if (incidentPanel) {
         incidentPanel.addEventListener('toggle', () => {
