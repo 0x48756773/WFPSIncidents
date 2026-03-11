@@ -49,7 +49,9 @@
                 <tbody>
                 <tr th:each="data: ${incidents}"
                     th:with="incidentType=${data.INCIDENT_TYPE != null ? data.INCIDENT_TYPE.toLowerCase() : ''}, incidentCategory=${#strings.startsWith(incidentType, 'fire rescue') ? 'fire' : (#strings.contains(incidentType, 'medical response') ? 'medical' : 'other')}"
-                    th:classappend="|incident-row incident-row-${incidentCategory}|">
+                    th:classappend="|incident-row incident-row-${incidentCategory}|"
+                    th:attr="data-incident=${data.INCIDENT_NUMBER}"
+                    style="cursor:pointer">
                     <td data-label="Incident Type"><span th:text="${data.INCIDENT_TYPE}"></span></td>
                     <td data-label="Category"><span class="badge"
                                                   th:classappend="| incident-badge incident-badge-${incidentCategory}|"
@@ -195,7 +197,12 @@
         return null;
     }
 
+    const markersByIncident = new Map();
+
     async function plotIncidents() {
+        const uniqueNeighbourhoods = [...new Set(incidents.map(i => i.NEIGHBOURHOOD).filter(Boolean))];
+        await Promise.all(uniqueNeighbourhoods.map(n => geocodeNeighbourhood(n)));
+
         for (const incident of incidents) {
             const coordinates = await getIncidentCoordinates(incident);
             if (!coordinates) {
@@ -212,13 +219,26 @@
 
             const markerColor = getCategoryColor(incident.INCIDENT_TYPE);
 
-            L.circleMarker(coordinates, {
+            const marker = L.circleMarker(coordinates, {
                 radius: 7,
                 color: markerColor,
                 fillColor: markerColor,
                 fillOpacity: 0.6
             }).addTo(map).bindPopup(popup);
+
+            markersByIncident.set(String(incident.INCIDENT_NUMBER), marker);
         }
+
+        document.querySelectorAll('tr[data-incident]').forEach(row => {
+            row.addEventListener('click', () => {
+                const marker = markersByIncident.get(row.dataset.incident);
+                if (!marker) return;
+                map.setView(marker.getLatLng(), Math.max(map.getZoom(), 14));
+                marker.openPopup();
+                marker.setStyle({ radius: 14, weight: 3 });
+                setTimeout(() => marker.setStyle({ radius: 7, weight: 1 }), 1500);
+            });
+        });
     }
 
     const incidentPanel = document.querySelector('.incident-table-panel');
