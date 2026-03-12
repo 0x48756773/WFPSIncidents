@@ -7,7 +7,7 @@ body {
 
 .app-shell {
     min-height: 100vh;
-    padding-bottom: 1rem;
+    padding-bottom: 0;
 }
 
 .page-title {
@@ -146,6 +146,23 @@ body {
     font-size: 0.8rem;
     margin-left: auto;
     padding: 0.25rem 0;
+}
+
+.site-footer {
+    border-top: 1px solid #dee2e6;
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+    padding: 0.75rem 0;
+    text-align: center;
+}
+
+.site-footer a {
+    color: #6c757d;
+}
+
+.site-footer-sep {
+    margin: 0 0.4rem;
 }
 
 .incident-chip-fire {

@@ -6,7 +6,24 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WFPS Incidents</title>
+    <title>WFPS Active Incident Map – Winnipeg Fire Paramedic Service</title>
+
+    <!-- SEO -->
+    <meta name="description" content="Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents. Track real-time fire, medical, and emergency responses across Winnipeg neighbourhoods.">
+    <meta name="keywords" content="WFPS, Winnipeg Fire Paramedic Service, Winnipeg fire, Winnipeg incidents, active incidents, emergency response, Winnipeg 911, fire map, EMS Winnipeg">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://wfps.jdsecurity.ca/">
+
+    <!-- Open Graph (Facebook, LinkedIn previews) -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wfps.jdsecurity.ca/">
+    <meta property="og:title" content="WFPS Active Incident Map – Winnipeg Fire Paramedic Service">
+    <meta property="og:description" content="Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents including fire, medical, and other emergency responses.">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="WFPS Active Incident Map">
+    <meta name="twitter:description" content="Live map of active Winnipeg Fire Paramedic Service incidents.">
 
     <link rel="stylesheet" href="https://bootswatch.com/5/minty/bootstrap.css" />
     <link rel="stylesheet" href="/css/main.css">
@@ -75,6 +92,12 @@
             </table>
         </div>
     </details>
+
+    <footer class="site-footer">
+        <a href="https://github.com/0x48756773/WFPSIncidents" target="_blank" rel="noopener">View on GitHub</a>
+        <span class="site-footer-sep">&middot;</span>
+        <span id="contact-link"></span>
+    </footer>
 </div>
 
 <script th:inline="javascript">
@@ -595,6 +618,15 @@
     window.addEventListener('resize', () => map.invalidateSize());
 
     plotIncidents();
+
+    // Build contact link at runtime to reduce email harvesting
+    (function () {
+        const u = 'wfps', d = 'jdsecurity.ca';
+        const a = document.createElement('a');
+        a.href = 'mailto:' + u + '@' + d;
+        a.textContent = u + '@' + d;
+        document.getElementById('contact-link').appendChild(a);
+    })();
 </script>
 </body>
 </html>
