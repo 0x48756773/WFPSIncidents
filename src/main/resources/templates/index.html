@@ -30,11 +30,44 @@
     <meta property="og:url" content="https://wfps.jdsecurity.ca/">
     <meta property="og:title" content="WFPS Active Incident Map – Winnipeg Fire Paramedic Service">
     <meta property="og:description" content="Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents including fire, medical, and other emergency responses.">
+    <meta property="og:image" content="https://wfps.jdsecurity.ca/og-preview.png">
+    <meta property="og:image:width" content="929">
+    <meta property="og:image:height" content="819">
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="WFPS Active Incident Map">
-    <meta name="twitter:description" content="Live map of active Winnipeg Fire Paramedic Service incidents.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://wfps.jdsecurity.ca/">
+    <meta name="twitter:title" content="WFPS Active Incident Map – Winnipeg Fire Paramedic Service">
+    <meta name="twitter:description" content="Live map of active Winnipeg Fire Paramedic Service incidents. Track real-time fire, medical, and emergency responses across Winnipeg.">
+    <meta name="twitter:image" content="https://wfps.jdsecurity.ca/og-preview.png">
+
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "WFPS Active Incident Map",
+      "url": "https://wfps.jdsecurity.ca/",
+      "description": "Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents. Track real-time fire, medical, and emergency responses across Winnipeg neighbourhoods.",
+      "applicationCategory": "UtilityApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CAD"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "Winnipeg Fire Paramedic Service",
+        "url": "https://www.winnipeg.ca/fire"
+      },
+      "about": {
+        "@type": "Thing",
+        "name": "Winnipeg Fire Paramedic Service Incidents",
+        "description": "Active emergency incidents attended by the Winnipeg Fire Paramedic Service, including fire rescue, medical responses, and other emergency calls."
+      }
+    }
+    </script>
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -49,6 +82,7 @@
 <body>
 <div class="container-fluid app-shell">
     <h1 class="page-title">WFPS Active Incident Map</h1>
+    <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every 5 minutes from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
 
     <div class="map-wrapper">
         <div id="map" class="map-panel"></div>
