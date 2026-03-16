@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>ca.jdsecurity</groupId>
 	<artifactId>incidents</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>incidents</name>
 	<description>Showing the Incidents in the City of Winnipeg</description>
 	<properties>

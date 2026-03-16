@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -94,6 +95,36 @@ public class Database {
         }
     }
 
+    private String formatCallTime(String callTime) {
+        if (callTime == null || callTime.isBlank()) {
+            return callTime;
+        }
+        try {
+            LocalDateTime dt;
+            try {
+                dt = OffsetDateTime.parse(callTime).toLocalDateTime();
+            } catch (DateTimeParseException e) {
+                dt = LocalDateTime.parse(callTime);
+            }
+            int day = dt.getDayOfMonth();
+            String suffix;
+            if (day >= 11 && day <= 13) {
+                suffix = "th";
+            } else {
+                suffix = switch (day % 10) {
+                    case 1 -> "st";
+                    case 2 -> "nd";
+                    case 3 -> "rd";
+                    default -> "th";
+                };
+            }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d'" + suffix + "', yyyy '@ 'H:mm:ss");
+            return dt.format(formatter);
+        } catch (DateTimeParseException e) {
+            return callTime;
+        }
+    }
+
     private boolean isWithinDuration(ZonedDateTime callDateTime, ZoneId zoneId) {
         ZonedDateTime now = ZonedDateTime.now(zoneId);
         Duration age = Duration.between(callDateTime, now);
@@ -112,6 +143,9 @@ public class Database {
                 HashMap<String, Object> row = new HashMap<>(columns);
                 for (int i = 1; i <= columns; ++i) {
                     row.put(md.getColumnName(i), result.getObject(i));
+                }
+                if (row.containsKey("CALL_TIME")) {
+                    row.put("CALL_TIME", formatCallTime((String) row.get("CALL_TIME")));
                 }
                 list.add(row);
             }
