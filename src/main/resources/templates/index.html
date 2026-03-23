@@ -84,6 +84,10 @@
     <h1 class="page-title">WFPS Active Incident Map</h1>
     <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every 5 minutes from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
 
+    <div th:if="${!dataSourceAvailable}" class="alert alert-warning" role="alert">
+        <strong>Data source unavailable.</strong> The City of Winnipeg Open Data portal could not be reached. Incident data shown may be outdated. The page will automatically display fresh data once the source comes back online.
+    </div>
+
     <div class="map-wrapper">
         <div id="map" class="map-panel"></div>
         <div id="map-loading" class="map-loading">

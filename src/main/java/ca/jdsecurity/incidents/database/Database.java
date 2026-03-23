@@ -23,6 +23,11 @@ public class Database {
     Connection con;
     CityOfWinnipegService cityOfWinnipegService;
     private static final Logger log = LoggerFactory.getLogger(Database.class);
+    private static volatile boolean dataSourceAvailable = true;
+
+    public static boolean isDataSourceAvailable() {
+        return dataSourceAvailable;
+    }
 
     public Database(String cityOfWinnipegSecret, String cityOfWinnipegHost, String cityOfWinnipegPath, String cityOfWinnipegQuery) throws SQLException {
         this.con = getConnection();
@@ -51,11 +56,15 @@ public class Database {
 
     public void syncIncidentsTable() throws SQLException, UnirestException, JsonProcessingException {
         log.info("Starting City of Winnipeg Incident Sync");
+
+        // Fetch first — if the API is down this throws before we touch the DB,
+        // so existing data is preserved rather than wiped.
+        List<HashMap<String, Object>> incidentListing = this.cityOfWinnipegService.getAllIncidents();
+
         try (Statement statement = con.createStatement()) {
             statement.execute("DELETE FROM incidents");
         }
 
-        List<HashMap<String, Object>> incidentListing = this.cityOfWinnipegService.getAllIncidents();
         try (PreparedStatement preparedStatement = con.prepareStatement(
                 "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?)"
         )) {
@@ -75,8 +84,17 @@ public class Database {
                 preparedStatement.execute();
             }
         }
+        dataSourceAvailable = true;
         log.info("City of Winnipeg Incident Sync Completed");
+    }
 
+    public void syncIncidentsTableSafe() {
+        try {
+            syncIncidentsTable();
+        } catch (Exception e) {
+            dataSourceAvailable = false;
+            log.error("Incident sync failed (data source may be unavailable): {}", e.getMessage());
+        }
     }
 
     private boolean isWithinLast24Hours(String callTime, ZoneId zoneId) {

@@ -42,6 +42,10 @@ public class CityOfWinnipegService {
         log.info("Status: " + jsonResponse.getStatus());
         log.info("Status Text: " + jsonResponse.getStatusText());
 
+        if (jsonResponse.getStatus() < 200 || jsonResponse.getStatus() >= 300) {
+            throw new RuntimeException("Data source returned HTTP " + jsonResponse.getStatus() + " " + jsonResponse.getStatusText());
+        }
+
         JSONArray incidentArray = jsonResponse.getBody().getArray();
 
         List<HashMap<String, Object>> incidentList = new ArrayList<>();

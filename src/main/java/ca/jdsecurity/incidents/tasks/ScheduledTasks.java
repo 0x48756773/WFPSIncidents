@@ -2,9 +2,7 @@ package ca.jdsecurity.incidents.tasks;
 
 import ca.jdsecurity.incidents.database.Database;
 import ca.jdsecurity.incidents.service.CityOfWinnipegService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +33,7 @@ public class ScheduledTasks {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
     @PostConstruct
-    public void initialize() throws SQLException, UnirestException, JsonProcessingException {
+    public void initialize() throws SQLException {
         this.cityOfWinnipegSecret = env.getProperty("secret.cityOfWinnipeg");
         this.cityOfWinnipegHost = env.getProperty("endpoint.cityOfWinnipeg.host");
         this.cityOfWinnipegPath = env.getProperty("endpoint.cityOfWinnipeg.path");
@@ -43,8 +41,9 @@ public class ScheduledTasks {
         this.cityOfWinnipegService = new CityOfWinnipegService(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
         this.database = new Database(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
     }
+
     @Scheduled(cron = "0 */5 * * * ?")
-    public void reportCurrentTime() throws SQLException, UnirestException, JsonProcessingException {
-        database.syncIncidentsTable();
+    public void reportCurrentTime() {
+        database.syncIncidentsTableSafe();
     }
 }
