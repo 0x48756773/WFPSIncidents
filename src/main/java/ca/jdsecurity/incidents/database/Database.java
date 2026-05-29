@@ -63,17 +63,38 @@ public class Database {
     }
 
     public void createIncidentsTable() {
-        boolean exists = Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection -> {
-            try (ResultSet tables = connection.getMetaData().getTables(null, null, "INCIDENTS", new String[]{"TABLE"})) {
+        if (!tableExists()) {
+            log.info("Creating incident table");
+            jdbc.execute(CREATE_TABLE_SQL);
+            return;
+        }
+        // Table already exists (e.g. created by an older version) — bring its schema
+        // up to date so the app self-heals instead of failing on a missing column.
+        log.info("Incident table already exists; checking for schema migrations");
+        ensureColumn("closed_time", "VARCHAR(255)");
+    }
+
+    private boolean tableExists() {
+        return Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection -> {
+            // Scope the lookup to the connection's current schema so it stays consistent
+            // with the unqualified DDL/DML the rest of the class issues.
+            try (ResultSet tables = connection.getMetaData().getTables(null, connection.getSchema(), "INCIDENTS", new String[]{"TABLE"})) {
                 return tables.next();
             }
         }));
-        if (exists) {
-            log.info("Incident table already exists");
+    }
+
+    private void ensureColumn(String column, String ddlType) {
+        boolean columnExists = Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection -> {
+            try (ResultSet columns = connection.getMetaData().getColumns(null, connection.getSchema(), "INCIDENTS", column.toUpperCase())) {
+                return columns.next();
+            }
+        }));
+        if (columnExists) {
             return;
         }
-        log.info("Creating incident table");
-        jdbc.execute(CREATE_TABLE_SQL);
+        log.info("Adding missing column '{}' to incidents table", column);
+        jdbc.execute("ALTER TABLE incidents ADD COLUMN " + column + " " + ddlType);
     }
 
     public void syncIncidentsTable() throws Exception {
