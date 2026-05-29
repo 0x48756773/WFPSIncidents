@@ -18,20 +18,21 @@ The app runs on `http://localhost:8080` by default.
 
 Spring Boot web app that fetches real-time [Winnipeg Fire Paramedic Service](https://data.winnipeg.ca/resource/yg42-q284.json) incidents and displays them on an interactive Leaflet.js map.
 
-**Request flow:** Every 5 minutes, `ScheduledTasks` calls `CityOfWinnipegService` (Unirest HTTP client, API token from `application.properties`) → syncs results into Apache Derby embedded database (`Database.java`) → `AppController` queries the DB and passes incidents to the Thymeleaf `index.html` template.
+**Request flow:** All components share a single Spring-managed `Database` bean. On startup (`@PostConstruct`) and every 5 minutes (`ScheduledTasks`), `Database` calls `CityOfWinnipegService` (Unirest HTTP client, API token from `application.properties`) → syncs results into the Apache Derby embedded database → `AppController` queries the DB and passes incidents to the Thymeleaf `index.html` template.
 
-**Key classes:**
-- `AppController` — single `GET /` route; also triggers initial data load on startup
-- `CityOfWinnipegService` — fetches JSON from Winnipeg Open Data API
-- `Database` — JDBC + embedded Derby; creates/manages the `incidents` table; filters to last 24 hours
+**Key classes** (all wired via Spring constructor injection — no manual `new`):
+- `AppController` — single `GET /` route; injects `Database`
+- `CityOfWinnipegService` — `@Service`; builds the SoQL query (open incidents + those closed within `closedWindowHours`) and fetches JSON from the Winnipeg Open Data API using `$where`/`$order`/`$limit`
+- `Database` — `@Repository`; uses the Spring-managed `DataSource` (HikariCP) via `JdbcTemplate`. Creates/manages the `incidents` table, runs the initial sync in `@PostConstruct`, filters to the last 24 hours by call time, and computes a closed flag + on-scene duration per incident
 - `ScheduledTasks` — `@Scheduled(cron = "0 */5 * * * ?")` refresh job
 
 **Frontend** (`index.html` + `static/scripts/maps.js`):
+- All map/table logic lives in the static, cacheable `maps.js`. The template renders only a small `window.WFPS_DATA` blob with the server-side incident list; `maps.js` reads it.
 - Leaflet.js map with OpenStreetMap tiles
-- Neighbourhoods are resolved to lat/lng via a hardcoded lookup table in `maps.js` (no geocoding API calls)
-- Incidents are colour-coded by category: Fire Rescue, Medical Response, Other
-- Clicking a table row pans/highlights the corresponding map marker, and vice versa
+- Neighbourhoods are resolved to lat/lng via a hardcoded lookup table in `maps.js` (Nominatim fallback for unknown ones)
+- Incidents are colour-coded by category: Fire Rescue, Medical Response, Other. Recently-closed incidents render with muted/dashed markers and a "Closed · <duration>" status badge, and can be hidden via the "Recently Closed" toggle (persisted in `localStorage`).
+- Category and closed filters hide both the map marker and the table row. Clicking a table row pans/highlights the corresponding marker, and vice versa.
 
-**Database:** Derby database files are stored in the `incidents/` directory at the project root (not committed). No migrations — table is created on first run via `Database.java`.
+**Database:** Configured via `spring.datasource.*` in `application.properties` (embedded Derby at `jdbc:derby:incidents;create=true`). Files live in the `incidents/` directory at the project root (not committed). No migrations — the table is created on first run by `Database.createIncidentsTable()`.
 
-**Configuration:** Sensitive values (`secret.cityOfWinnipeg` API token) live in `application.properties`, which is not committed.
+**Configuration:** Sensitive values (`secret.cityOfWinnipeg` API token) live in `application.properties`, which is not committed. Tunables: `endpoint.cityOfWinnipeg.limit` (max records per fetch) and `endpoint.cityOfWinnipeg.closedWindowHours` (how far back to include closed incidents).
