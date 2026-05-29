@@ -185,6 +185,39 @@ body {
     background-color: #6c757d;
 }
 
+.incident-chip-closed {
+    background-color: #495057;
+    border: 1px dashed #adb5bd;
+}
+
+/* ---- Closed / recently-resolved incidents ---- */
+
+.incident-badge-closed {
+    background-color: #495057;
+    font-weight: 600;
+}
+
+.incident-status-active {
+    color: #198754;
+    font-weight: 600;
+}
+
+.incident-row-closed td {
+    opacity: 0.7;
+}
+
+.incident-row-closed td:has(.incident-badge-closed) {
+    opacity: 1;
+}
+
+.incident-hidden {
+    display: none !important;
+}
+
+html.dark-mode .incident-status-active {
+    color: #4ade80;
+}
+
 /*
  * Always set the map height explicitly to define the size of the div element
  * that contains the map.

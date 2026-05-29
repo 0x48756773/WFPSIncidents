@@ -1,12 +1,14 @@
 package ca.jdsecurity.incidents.database;
 
 import ca.jdsecurity.incidents.service.CityOfWinnipegService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.mashape.unirest.http.exceptions.UnirestException;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.ConnectionCallback;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 
-import java.sql.*;
+import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -16,76 +18,94 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Repository
 public class Database {
-    Connection con;
-    CityOfWinnipegService cityOfWinnipegService;
-    private static final Logger log = LoggerFactory.getLogger(Database.class);
-    private static volatile boolean dataSourceAvailable = true;
 
-    public static boolean isDataSourceAvailable() {
+    private static final Logger log = LoggerFactory.getLogger(Database.class);
+    private static final ZoneId WINNIPEG = ZoneId.of("America/Winnipeg");
+
+    private static final String CREATE_TABLE_SQL =
+            "CREATE TABLE incidents (" +
+                    "incident_number VARCHAR(255) PRIMARY KEY," +
+                    "incident_type VARCHAR(255)," +
+                    "is_motor VARCHAR(255)," +
+                    "units VARCHAR(255)," +
+                    "neighbourhood VARCHAR(255)," +
+                    "ward VARCHAR(255)," +
+                    "call_time VARCHAR(255)," +
+                    "closed_time VARCHAR(255))";
+
+    private static final String INSERT_SQL =
+            "INSERT INTO incidents (incident_number, incident_type, is_motor, units, neighbourhood, ward, call_time, closed_time) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private final JdbcTemplate jdbc;
+    private final CityOfWinnipegService cityOfWinnipegService;
+    private volatile boolean dataSourceAvailable = true;
+
+    public Database(JdbcTemplate jdbc, CityOfWinnipegService cityOfWinnipegService) {
+        this.jdbc = jdbc;
+        this.cityOfWinnipegService = cityOfWinnipegService;
+    }
+
+    public boolean isDataSourceAvailable() {
         return dataSourceAvailable;
     }
 
-    public Database(String cityOfWinnipegSecret, String cityOfWinnipegHost, String cityOfWinnipegPath, String cityOfWinnipegQuery) throws SQLException {
-        this.con = getConnection();
-        this.cityOfWinnipegService = new CityOfWinnipegService(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
+    @PostConstruct
+    public void initialize() {
         createIncidentsTable();
+        syncIncidentsTableSafe();
     }
 
-    public Connection getConnection() throws SQLException {
-        String urlConnection = "jdbc:derby:incidents;create=true";
-        return DriverManager.getConnection(urlConnection);
-    }
-
-    public void createIncidentsTable() throws SQLException {
-        log.info("Creating Incident Table");
-        String sql = "CREATE TABLE incidents (incident_number VARCHAR(255) PRIMARY KEY,incident_type VARCHAR(255),is_motor VARCHAR(255),units VARCHAR(255),neighbourhood VARCHAR(255),ward VARCHAR(255), call_time VARCHAR(255))";
-        try (Statement statement = con.createStatement()) {
-            statement.execute(sql);
-        } catch (SQLException e) {
-            // Derby SQLState for "table already exists"
-            if (!"X0Y32".equals(e.getSQLState())) {
-                throw e;
+    public void createIncidentsTable() {
+        boolean exists = Boolean.TRUE.equals(jdbc.execute((ConnectionCallback<Boolean>) connection -> {
+            try (ResultSet tables = connection.getMetaData().getTables(null, null, "INCIDENTS", new String[]{"TABLE"})) {
+                return tables.next();
             }
+        }));
+        if (exists) {
             log.info("Incident table already exists");
+            return;
         }
+        log.info("Creating incident table");
+        jdbc.execute(CREATE_TABLE_SQL);
     }
 
-    public void syncIncidentsTable() throws SQLException, UnirestException, JsonProcessingException {
-        log.info("Starting City of Winnipeg Incident Sync");
+    public void syncIncidentsTable() throws Exception {
+        log.info("Starting City of Winnipeg incident sync");
 
         // Fetch first — if the API is down this throws before we touch the DB,
         // so existing data is preserved rather than wiped.
-        List<HashMap<String, Object>> incidentListing = this.cityOfWinnipegService.getAllIncidents();
+        List<HashMap<String, Object>> incidentListing = cityOfWinnipegService.getAllIncidents();
 
-        try (Statement statement = con.createStatement()) {
-            statement.execute("DELETE FROM incidents");
-        }
-
-        try (PreparedStatement preparedStatement = con.prepareStatement(
-                "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?)"
-        )) {
-            for (Map<String, Object> incident : incidentListing) {
-                String callTime = (String) incident.get("call_time");
-                if (!isWithinLast24Hours(callTime, ZoneId.of("America/Winnipeg"))) {
-                    continue;
-                }
-
-                preparedStatement.setString(1, (String) incident.get("incident_number"));
-                preparedStatement.setString(2, (String) incident.get("incident_type"));
-                preparedStatement.setString(3, (String) incident.get("motor_vehicle_incident"));
-                preparedStatement.setString(4, (String) incident.get("units"));
-                preparedStatement.setString(5, (String) incident.get("neighbourhood"));
-                preparedStatement.setString(6, (String) incident.get("ward"));
-                preparedStatement.setString(7, callTime);
-                preparedStatement.execute();
+        List<Object[]> batch = new ArrayList<>();
+        for (Map<String, Object> incident : incidentListing) {
+            String callTime = (String) incident.get("call_time");
+            if (!isWithinLast24Hours(callTime)) {
+                continue;
             }
+            batch.add(new Object[]{
+                    incident.get("incident_number"),
+                    incident.get("incident_type"),
+                    incident.get("motor_vehicle_incident"),
+                    incident.get("units"),
+                    incident.get("neighbourhood"),
+                    incident.get("ward"),
+                    callTime,
+                    incident.get("closed_time")
+            });
         }
+
+        jdbc.update("DELETE FROM incidents");
+        jdbc.batchUpdate(INSERT_SQL, batch);
+
         dataSourceAvailable = true;
-        log.info("City of Winnipeg Incident Sync Completed");
+        log.info("City of Winnipeg incident sync completed ({} incidents)", batch.size());
     }
 
     public void syncIncidentsTableSafe() {
@@ -97,77 +117,92 @@ public class Database {
         }
     }
 
-    private boolean isWithinLast24Hours(String callTime, ZoneId zoneId) {
-        if (callTime == null || callTime.isBlank()) {
+    public List<Map<String, Object>> getRecentIncidents() {
+        log.info("Retrieving all incidents from database");
+        return jdbc.query("SELECT * FROM incidents ORDER BY call_time DESC", (rs, rowNum) -> {
+            String rawCallTime = rs.getString("call_time");
+            String rawClosedTime = rs.getString("closed_time");
+            boolean closed = rawClosedTime != null && !rawClosedTime.isBlank();
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("INCIDENT_NUMBER", rs.getString("incident_number"));
+            row.put("INCIDENT_TYPE", rs.getString("incident_type"));
+            row.put("IS_MOTOR", rs.getString("is_motor"));
+            row.put("UNITS", rs.getString("units"));
+            row.put("NEIGHBOURHOOD", rs.getString("neighbourhood"));
+            row.put("WARD", rs.getString("ward"));
+            row.put("CALL_TIME", formatCallTime(rawCallTime));
+            row.put("CLOSED", closed);
+            row.put("CLOSED_TIME", closed ? formatCallTime(rawClosedTime) : "");
+            row.put("DURATION", closed ? formatDuration(rawCallTime, rawClosedTime) : "");
+            return row;
+        });
+    }
+
+    private boolean isWithinLast24Hours(String callTime) {
+        ZonedDateTime parsed = parse(callTime);
+        if (parsed == null) {
             return false;
         }
-
-        try {
-            return isWithinDuration(OffsetDateTime.parse(callTime).atZoneSameInstant(zoneId), zoneId);
-        } catch (DateTimeParseException e) {
-            try {
-                return isWithinDuration(LocalDateTime.parse(callTime).atZone(zoneId), zoneId);
-            } catch (DateTimeParseException ignored) {
-                return false;
-            }
-        }
-    }
-
-    private String formatCallTime(String callTime) {
-        if (callTime == null || callTime.isBlank()) {
-            return callTime;
-        }
-        try {
-            LocalDateTime dt;
-            try {
-                dt = OffsetDateTime.parse(callTime).toLocalDateTime();
-            } catch (DateTimeParseException e) {
-                dt = LocalDateTime.parse(callTime);
-            }
-            int day = dt.getDayOfMonth();
-            String suffix;
-            if (day >= 11 && day <= 13) {
-                suffix = "th";
-            } else {
-                suffix = switch (day % 10) {
-                    case 1 -> "st";
-                    case 2 -> "nd";
-                    case 3 -> "rd";
-                    default -> "th";
-                };
-            }
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d'" + suffix + "', yyyy '@ 'H:mm:ss");
-            return dt.format(formatter);
-        } catch (DateTimeParseException e) {
-            return callTime;
-        }
-    }
-
-    private boolean isWithinDuration(ZonedDateTime callDateTime, ZoneId zoneId) {
-        ZonedDateTime now = ZonedDateTime.now(zoneId);
-        Duration age = Duration.between(callDateTime, now);
+        Duration age = Duration.between(parsed, ZonedDateTime.now(WINNIPEG));
         return !age.isNegative() && age.compareTo(Duration.ofHours(24)) <= 0;
     }
 
-    public List<HashMap<String, Object>> getAllIncidentsFromToday() throws SQLException {
-        log.info("Retrieving all Incidents from Database");
-        try (Statement statement = con.createStatement();
-             ResultSet result = statement.executeQuery("select * from incidents")) {
-            ResultSetMetaData md = result.getMetaData();
-            int columns = md.getColumnCount();
-            List<HashMap<String, Object>> list = new ArrayList<>();
+    private String formatCallTime(String timestamp) {
+        ZonedDateTime parsed = parse(timestamp);
+        if (parsed == null) {
+            return timestamp;
+        }
+        int day = parsed.getDayOfMonth();
+        String suffix;
+        if (day >= 11 && day <= 13) {
+            suffix = "th";
+        } else {
+            suffix = switch (day % 10) {
+                case 1 -> "st";
+                case 2 -> "nd";
+                case 3 -> "rd";
+                default -> "th";
+            };
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d'" + suffix + "', yyyy '@ 'H:mm:ss");
+        return parsed.format(formatter);
+    }
 
-            while (result.next()) {
-                HashMap<String, Object> row = new HashMap<>(columns);
-                for (int i = 1; i <= columns; ++i) {
-                    row.put(md.getColumnName(i), result.getObject(i));
-                }
-                if (row.containsKey("CALL_TIME")) {
-                    row.put("CALL_TIME", formatCallTime((String) row.get("CALL_TIME")));
-                }
-                list.add(row);
+    private String formatDuration(String callTime, String closedTime) {
+        ZonedDateTime start = parse(callTime);
+        ZonedDateTime end = parse(closedTime);
+        if (start == null || end == null) {
+            return "";
+        }
+        Duration duration = Duration.between(start, end);
+        if (duration.isNegative()) {
+            return "";
+        }
+        long hours = duration.toHours();
+        long minutes = duration.toMinutesPart();
+        if (hours > 0) {
+            return hours + "h " + minutes + "m";
+        }
+        return minutes + "m";
+    }
+
+    /**
+     * Parses either an offset timestamp or a floating (zone-less) one, anchoring the
+     * latter to Winnipeg local time. Returns {@code null} when the value can't be parsed.
+     */
+    private ZonedDateTime parse(String timestamp) {
+        if (timestamp == null || timestamp.isBlank()) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(timestamp).atZoneSameInstant(WINNIPEG);
+        } catch (DateTimeParseException offsetMiss) {
+            try {
+                return LocalDateTime.parse(timestamp).atZone(WINNIPEG);
+            } catch (DateTimeParseException localMiss) {
+                return null;
             }
-            return list;
         }
     }
 }

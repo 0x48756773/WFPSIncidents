@@ -1,49 +1,20 @@
 package ca.jdsecurity.incidents.tasks;
 
 import ca.jdsecurity.incidents.database.Database;
-import ca.jdsecurity.incidents.service.CityOfWinnipegService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 @Component
 public class ScheduledTasks {
 
-    Database database;
-    ObjectMapper objectMapper = new ObjectMapper();
-    @Autowired
-    private Environment env;
-    String cityOfWinnipegSecret;
-    String cityOfWinnipegHost;
-    String cityOfWinnipegPath;
-    String cityOfWinnipegQuery;
-    CityOfWinnipegService cityOfWinnipegService;
+    private final Database database;
 
-    private static final Logger log = LoggerFactory.getLogger(ScheduledTasks.class);
-
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-
-    @PostConstruct
-    public void initialize() throws SQLException {
-        this.cityOfWinnipegSecret = env.getProperty("secret.cityOfWinnipeg");
-        this.cityOfWinnipegHost = env.getProperty("endpoint.cityOfWinnipeg.host");
-        this.cityOfWinnipegPath = env.getProperty("endpoint.cityOfWinnipeg.path");
-        this.cityOfWinnipegQuery = env.getProperty("endpoint.cityOfWinnipeg.query");
-        this.cityOfWinnipegService = new CityOfWinnipegService(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
-        this.database = new Database(cityOfWinnipegSecret, cityOfWinnipegHost, cityOfWinnipegPath, cityOfWinnipegQuery);
+    public ScheduledTasks(Database database) {
+        this.database = database;
     }
 
     @Scheduled(cron = "0 */5 * * * ?")
-    public void reportCurrentTime() {
+    public void refreshIncidents() {
         database.syncIncidentsTableSafe();
     }
 }
