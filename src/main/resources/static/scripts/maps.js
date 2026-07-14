@@ -22,7 +22,6 @@
     lightTile.addTo(map);
 
     const neighbourhoodCentres = {
-        'Abbey': [49.8914, -97.2885],
         'Agassiz': [49.8168, -97.1428],
         'Airport': [49.9133, -97.2471],
         'Alpine Place': [49.8528, -97.0946],
@@ -43,10 +42,8 @@
         'Brockville': [49.8459, -97.1930],
         'Brooklands': [49.9211, -97.1971],
         'Bruce Park': [49.8750, -97.2210],
-        'Bryan Roblin Park': [49.8578, -97.2935],
         'Buchanan': [49.8931, -97.3198],
         'Buffalo': [49.8364, -97.1775],
-        'Burrows': [49.9280, -97.1580],
         'Burrows Central': [49.9280, -97.1580],
         'Burrows-Keewatin': [49.9227, -97.1911],
         'Canterbury Park': [49.8975, -96.9750],
@@ -55,7 +52,6 @@
         'Central St. Boniface': [49.8914, -97.1051],
         'Centennial': [49.9047, -97.1433],
         'Chalmers': [49.9049, -97.1045],
-        'Charleswood': [49.8620, -97.2750],
         'Chevrier': [49.8350, -97.1650],
         'China Town': [49.9043, -97.1389],
         'Civic Centre': [49.8963, -97.1368],
@@ -67,7 +63,6 @@
         'Dakota Crossing': [49.8190, -97.0930],
         'Daniel McIntyre': [49.9040, -97.1631],
         'Deer Lodge': [49.8869, -97.2320],
-        'Downtown': [49.8950, -97.1400],
         'Dufferin': [49.9180, -97.1545],
         'Dufferin Industrial': [49.9130, -97.1560],
         'Dufresne': [49.8822, -97.1028],
@@ -75,18 +70,14 @@
         'Eaglemere': [49.9159, -97.0559],
         'Earl Grey': [49.8693, -97.1518],
         'East Elmwood': [49.9045, -97.0842],
-        'East Kildonan': [49.9150, -97.0900],
         'Ebby-Wentworth': [49.8610, -97.1480],
         'Edgeland': [49.8689, -97.2086],
         'Elm Park': [49.8610, -97.1119],
         'Elmhurst': [49.8525, -97.2555],
-        'Elmwood': [49.8980, -97.0870],
         'Eric Coy': [49.8577, -97.2756],
         'Exchange District': [49.8980, -97.1366],
         'Fairfield Park': [49.8010, -97.1610],
-        'Fort Garry': [49.8200, -97.1400],
         'Fort Richmond': [49.7954, -97.1179],
-        'Fort Rouge': [49.8720, -97.1400],
         'Fraipont': [49.8265, -97.0570],
         'Garden City': [49.9410, -97.1500],
         'Glendale': [49.8775, -97.3202],
@@ -150,9 +141,7 @@
         'Niakwa Place': [49.8498, -97.0884],
         'Norberry': [49.8493, -97.1153],
         'Normand Park': [49.8069, -97.1197],
-        'North End': [49.9200, -97.1400],
         'North Inkster Industrial': [49.9534, -97.2184],
-        'North Kildonan': [49.9350, -97.0700],
         'North Point Douglas': [49.9036, -97.1088],
         'North River Heights': [49.8720, -97.1850],
         'North St. Boniface': [49.9015, -97.1229],
@@ -160,7 +149,6 @@
         'Norwood East': [49.8750, -97.1070],
         'Norwood West': [49.8746, -97.1320],
         'Oak Point Highway': [49.9397, -97.2160],
-        'Old Kildonan': [49.9700, -97.1450],
         'Old Tuxedo': [49.8732, -97.2079],
         "Omand's Creek Industrial": [49.9233, -97.2155],
         'Pacific Industrial': [49.9089, -97.1732],
@@ -182,7 +170,6 @@
         'Ridgedale': [49.8690, -97.2760],
         'Ridgewood South': [49.8456, -97.2735],
         'River East': [49.9480, -97.0550],
-        'River Heights': [49.8640, -97.1800],
         'River Park South': [49.8090, -97.1164],
         'River West Park': [49.8710, -97.3190],
         'River-Osborne': [49.8804, -97.1398],
@@ -215,16 +202,13 @@
         'Spence': [49.8950, -97.1570],
         'Springfield North': [49.9383, -97.0495],
         'Springfield South': [49.9269, -97.0537],
-        'St. Boniface': [49.8850, -97.1100],
         'St. Boniface Industrial Park': [49.8750, -97.0350],
         'St. George': [49.8493, -97.1044],
-        'St. James': [49.8900, -97.2400],
         'St. James Industrial': [49.8997, -97.2168],
         "St. John's": [49.9200, -97.1330],
         "St. John's Park": [49.9165, -97.1230],
         'St. Matthews': [49.8860, -97.1630],
         'St. Norbert': [49.7706, -97.1533],
-        'St. Vital': [49.8450, -97.1000],
         'St. Vital Centre': [49.8247, -97.1106],
         'St. Vital Perimeter South': [49.7813, -97.0796],
         'Stock Yards': [49.8744, -97.0848],
@@ -237,15 +221,12 @@
         'The Mint': [49.8478, -97.0564],
         'Tissot': [49.8941, -97.1065],
         'Trappistes': [49.7510, -97.1707],
-        'Transcona': [49.8950, -96.9900],
         'Transcona North': [49.9120, -96.9945],
         'Transcona South': [49.8750, -96.9950],
         'Transcona Yards': [49.8859, -96.9881],
-        'Tundra Industrial': [49.9543, -97.2177],
         'Turnbull Drive': [49.7541, -97.1364],
         'Tuxedo': [49.8657, -97.2101],
         'Tuxedo Industrial': [49.8467, -97.1968],
-        'Tuxedo Park': [49.8657, -97.2101],
         'Tyndall Park': [49.9402, -97.2046],
         'Tyne-Tees': [49.9031, -97.0749],
         'University': [49.8100, -97.1400],
@@ -258,7 +239,6 @@
         'Victoria West': [49.9037, -97.0093],
         'Vista': [49.8250, -97.1080],
         'Waverley Heights': [49.8147, -97.1613],
-        'Waverley West': [49.7949, -97.1878],
         'Waverley West B': [49.7949, -97.1878],
         'Wellington Crescent': [49.8790, -97.1850],
         'West Alexander': [49.9057, -97.1599],
@@ -283,6 +263,17 @@
 
     const neighbourhoodCoordinatesCache = {};
     const geocodeFailures = new Set();
+
+    // The feed uses these in place of a neighbourhood when it has no usable location.
+    // They are not places, so they must never be geocoded or plotted — guessing a
+    // position for them would invent an incident location that does not exist.
+    const NON_LOCATABLE_NEIGHBOURHOODS = new Set(['outside winnipeg', 'unverified']);
+
+    function isLocatable(neighbourhoodName) {
+        return !!neighbourhoodName
+            && !NON_LOCATABLE_NEIGHBOURHOODS.has(String(neighbourhoodName).trim().toLowerCase());
+    }
+
     const wardCentres = {
         'Assiniboia': [49.8573, -97.2835],
         'Charleswood - Tuxedo - Westwood': [49.8569, -97.2525],
@@ -552,6 +543,10 @@
 
     async function getIncidentCoordinates(incident) {
         const neighbourhood = incident.NEIGHBOURHOOD;
+        if (!isLocatable(neighbourhood)) {
+            return null;
+        }
+
         const feature = findNeighbourhoodFeature(neighbourhood);
         const geocodedCoordinates = await geocodeNeighbourhood(neighbourhood);
 
