@@ -302,6 +302,30 @@
         'Waverley West': [49.7927, -97.1854]
     };
 
+    // --- Neighbourhood boundaries ---
+    // Loaded up front (rather than lazily for the outline overlay) because marker
+    // placement depends on them: see jitterCoordinates.
+    const neighbourhoodFeaturesByName = new Map();
+    const neighbourhoodInteriorPoints = new Map();
+    const neighbourhoodGeoJsonReady = fetch('https://data.winnipeg.ca/resource/8k6x-xxsy.geojson')
+        .then(r => r.json())
+        .then(data => {
+            for (const feature of data.features || []) {
+                const name = feature.properties && feature.properties.name;
+                if (name) {
+                    neighbourhoodFeaturesByName.set(name.toLowerCase(), feature);
+                }
+            }
+        })
+        .catch(() => {});
+
+    function findNeighbourhoodFeature(neighbourhoodName) {
+        if (!neighbourhoodName) {
+            return null;
+        }
+        return neighbourhoodFeaturesByName.get(String(neighbourhoodName).toLowerCase()) || null;
+    }
+
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>'"]/g, (char) => ({
             '&': '&amp;',
@@ -338,7 +362,120 @@
         return incident.CLOSED === true || incident.CLOSED === 'true';
     }
 
-    function jitterCoordinates(baseCoordinates, seedText) {
+    // GeoJSON rings are [lng, lat]; Leaflet coordinates are [lat, lng].
+    function pointInRing(lat, lng, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const [lngI, latI] = ring[i];
+            const [lngJ, latJ] = ring[j];
+            const crosses = (latI > lat) !== (latJ > lat)
+                && lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI;
+            if (crosses) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    function pointInPolygon(lat, lng, rings) {
+        if (!rings.length || !pointInRing(lat, lng, rings[0])) {
+            return false;
+        }
+        // Remaining rings are holes.
+        for (let i = 1; i < rings.length; i++) {
+            if (pointInRing(lat, lng, rings[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function pointInFeature(coordinates, feature) {
+        const geometry = feature && feature.geometry;
+        if (!coordinates || !geometry) {
+            return false;
+        }
+
+        const [lat, lng] = coordinates;
+        if (geometry.type === 'Polygon') {
+            return pointInPolygon(lat, lng, geometry.coordinates);
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return geometry.coordinates.some(rings => pointInPolygon(lat, lng, rings));
+        }
+        return false;
+    }
+
+    function forEachOuterRing(feature, callback) {
+        const geometry = feature.geometry;
+        if (geometry.type === 'Polygon') {
+            callback(geometry.coordinates[0]);
+        } else if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(rings => callback(rings[0]));
+        }
+    }
+
+    // A point guaranteed to sit inside the boundary, used when the configured
+    // centre does not (the lookup table and Nominatim are both approximate).
+    function getInteriorPoint(neighbourhoodName, feature) {
+        if (neighbourhoodInteriorPoints.has(neighbourhoodName)) {
+            return neighbourhoodInteriorPoints.get(neighbourhoodName);
+        }
+
+        let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+        let sumLat = 0, sumLng = 0, vertexCount = 0;
+        forEachOuterRing(feature, ring => {
+            for (const [lng, lat] of ring) {
+                minLat = Math.min(minLat, lat);
+                maxLat = Math.max(maxLat, lat);
+                minLng = Math.min(minLng, lng);
+                maxLng = Math.max(maxLng, lng);
+                sumLat += lat;
+                sumLng += lng;
+                vertexCount++;
+            }
+        });
+
+        let interiorPoint = null;
+        if (vertexCount > 0) {
+            const centroid = [sumLat / vertexCount, sumLng / vertexCount];
+            if (pointInFeature(centroid, feature)) {
+                interiorPoint = centroid;
+            } else {
+                // Concave or multi-part shape: the centroid can fall outside, so take
+                // the grid point inside the boundary that sits closest to it.
+                const STEPS = 16;
+                let bestDistance = Infinity;
+                for (let i = 1; i < STEPS; i++) {
+                    for (let j = 1; j < STEPS; j++) {
+                        const candidate = [
+                            minLat + (maxLat - minLat) * (i / STEPS),
+                            minLng + (maxLng - minLng) * (j / STEPS)
+                        ];
+                        if (!pointInFeature(candidate, feature)) {
+                            continue;
+                        }
+                        const distance = Math.hypot(candidate[0] - centroid[0], candidate[1] - centroid[1]);
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            interiorPoint = candidate;
+                        }
+                    }
+                }
+            }
+        }
+
+        neighbourhoodInteriorPoints.set(neighbourhoodName, interiorPoint);
+        return interiorPoint;
+    }
+
+    // Incidents are only located to a neighbourhood, so markers are spread around its
+    // centre to stop them stacking. The offset is shrunk until the marker lands inside
+    // the boundary — a full-size offset overshoots small neighbourhoods.
+    const JITTER_STEP = 0.0007;
+    const JITTER_SCALES = [1, 0.6, 0.35, 0.2, 0.1];
+
+    function jitterCoordinates(baseCoordinates, seedText, feature) {
         if (!baseCoordinates) {
             return null;
         }
@@ -349,9 +486,30 @@
             hash |= 0;
         }
 
-        const latJitter = ((hash & 15) - 8) * 0.0007;
-        const lngJitter = (((hash >> 4) & 15) - 8) * 0.0007;
-        return [baseCoordinates[0] + latJitter, baseCoordinates[1] + lngJitter];
+        const latSteps = (hash & 15) - 8;
+        const lngSteps = ((hash >> 4) & 15) - 8;
+
+        // No boundary to test against (unknown neighbourhood, ward fallback, or the
+        // GeoJSON fetch failed): keep the unconstrained offset.
+        if (!feature) {
+            return [
+                baseCoordinates[0] + latSteps * JITTER_STEP,
+                baseCoordinates[1] + lngSteps * JITTER_STEP
+            ];
+        }
+
+        for (const scale of JITTER_SCALES) {
+            const candidate = [
+                baseCoordinates[0] + latSteps * JITTER_STEP * scale,
+                baseCoordinates[1] + lngSteps * JITTER_STEP * scale
+            ];
+            if (pointInFeature(candidate, feature)) {
+                return candidate;
+            }
+        }
+
+        // Every offset overshoots (a very small neighbourhood): sit on the centre.
+        return pointInFeature(baseCoordinates, feature) ? baseCoordinates : null;
     }
 
     async function geocodeNeighbourhood(neighbourhoodName) {
@@ -394,14 +552,24 @@
 
     async function getIncidentCoordinates(incident) {
         const neighbourhood = incident.NEIGHBOURHOOD;
+        const feature = findNeighbourhoodFeature(neighbourhood);
         const geocodedCoordinates = await geocodeNeighbourhood(neighbourhood);
-        if (geocodedCoordinates) {
-            return jitterCoordinates(geocodedCoordinates, incident.INCIDENT_NUMBER);
+
+        let centre = geocodedCoordinates;
+        if (feature && !pointInFeature(centre, feature)) {
+            centre = getInteriorPoint(neighbourhood, feature);
+        }
+
+        if (centre) {
+            const coordinates = jitterCoordinates(centre, incident.INCIDENT_NUMBER, feature);
+            if (coordinates) {
+                return coordinates;
+            }
         }
 
         const wardCoordinates = wardCentres[incident.WARD];
         if (wardCoordinates) {
-            return jitterCoordinates(wardCoordinates, incident.INCIDENT_NUMBER);
+            return jitterCoordinates(wardCoordinates, incident.INCIDENT_NUMBER, null);
         }
 
         return null;
@@ -411,13 +579,7 @@
     const optNeighbourhoodOutline = document.getElementById('opt-neighbourhood-outline');
     const optDarkMode = document.getElementById('opt-dark-mode');
 
-    // --- Neighbourhood GeoJSON ---
-    let neighbourhoodGeoJsonData = null;
     let activeNeighbourhoodLayer = null;
-    fetch('https://data.winnipeg.ca/resource/8k6x-xxsy.geojson')
-        .then(r => r.json())
-        .then(data => { neighbourhoodGeoJsonData = data; })
-        .catch(() => {});
 
     // --- State ---
     const markersByIncident = new Map();
@@ -475,10 +637,7 @@
     // --- Neighbourhood outline ---
     function showNeighbourhoodOutline(neighbourhoodName) {
         clearNeighbourhoodOutline();
-        if (!neighbourhoodGeoJsonData || !neighbourhoodName) return;
-        const feature = neighbourhoodGeoJsonData.features.find(f =>
-            (f.properties.name || '').toLowerCase() === neighbourhoodName.toLowerCase()
-        );
+        const feature = findNeighbourhoodFeature(neighbourhoodName);
         if (!feature) return;
         activeNeighbourhoodLayer = L.geoJSON(feature, {
             style: {
@@ -504,6 +663,11 @@
 
     async function plotIncidents() {
         document.getElementById('map-loading').style.display = 'flex';
+
+        // Boundaries must be indexed before placing markers so each one can be
+        // constrained to its neighbourhood. Resolves either way — if the fetch
+        // fails, markers fall back to unconstrained offsets.
+        await neighbourhoodGeoJsonReady;
 
         const bounds = [];
 
