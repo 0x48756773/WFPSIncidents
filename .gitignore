@@ -33,3 +33,6 @@ build/
 ### VS Code ###
 .vscode/
 /incidents/
+
+# macOS
+.DS_Store

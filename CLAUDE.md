@@ -22,8 +22,8 @@ Spring Boot web app that fetches real-time [Winnipeg Fire Paramedic Service](htt
 
 **Key classes** (all wired via Spring constructor injection — no manual `new`):
 - `AppController` — single `GET /` route; injects `Database`
-- `CityOfWinnipegService` — `@Service`; builds the SoQL query (open incidents + those closed within `closedWindowHours`) and fetches JSON from the Winnipeg Open Data API using `$where`/`$order`/`$limit`
-- `Database` — `@Repository`; uses the Spring-managed `DataSource` (HikariCP) via `JdbcTemplate`. Creates/manages the `incidents` table, runs the initial sync in `@PostConstruct`, filters to the last 24 hours by call time, and computes a closed flag + on-scene duration per incident
+- `CityOfWinnipegService` — `@Service`; builds the SoQL query (called within `callWindowHours`, and either open or closed within `closedWindowHours`) and fetches JSON from the Winnipeg Open Data API using `$where`/`$order`/`$limit`. The `call_time` bound matters: without it the query also matches every never-closed incident regardless of age — hundreds of stale records that the retention filter discards but that still count against `$limit`
+- `Database` — `@Repository`; uses the Spring-managed `DataSource` (HikariCP) via `JdbcTemplate`. Creates/manages the `incidents` table, runs the initial sync in `@PostConstruct`, filters by call time to the service's `callWindowHours` (via `getCallWindowHours()`, so the fetch and this retention filter share one window), and computes a closed flag + on-scene duration per incident
 - `ScheduledTasks` — `@Scheduled(cron = "0 */5 * * * ?")` refresh job
 
 **Frontend** (`index.html` + `static/scripts/maps.js`):
@@ -37,4 +37,4 @@ Spring Boot web app that fetches real-time [Winnipeg Fire Paramedic Service](htt
 
 **Database:** Configured via `spring.datasource.*` in `application.properties` (embedded Derby at `jdbc:derby:incidents;create=true`). Files live in the `incidents/` directory at the project root (not committed). No migrations — the table is created on first run by `Database.createIncidentsTable()`.
 
-**Configuration:** Sensitive values (`secret.cityOfWinnipeg` API token) live in `application.properties`, which is not committed. Tunables: `endpoint.cityOfWinnipeg.limit` (max records per fetch) and `endpoint.cityOfWinnipeg.closedWindowHours` (how far back to include closed incidents).
+**Configuration:** Sensitive values (`secret.cityOfWinnipeg` API token) live in `application.properties`, which is not committed. Tunables: `endpoint.cityOfWinnipeg.limit` (max records per fetch), `endpoint.cityOfWinnipeg.closedWindowHours` (how far back to include closed incidents), and `endpoint.cityOfWinnipeg.callWindowHours` (retention window by call time, default 24; bounds both the fetch and the display filter).

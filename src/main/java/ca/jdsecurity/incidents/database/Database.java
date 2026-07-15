@@ -107,7 +107,7 @@ public class Database {
         List<Object[]> batch = new ArrayList<>();
         for (Map<String, Object> incident : incidentListing) {
             String callTime = (String) incident.get("call_time");
-            if (!isWithinLast24Hours(callTime)) {
+            if (!isWithinCallWindow(callTime)) {
                 continue;
             }
             batch.add(new Object[]{
@@ -160,13 +160,16 @@ public class Database {
         });
     }
 
-    private boolean isWithinLast24Hours(String callTime) {
+    // Retention window, taken from the service so the fetch and this filter cannot drift apart:
+    // anything the query returns is displayable, and anything displayable the query asks for.
+    private boolean isWithinCallWindow(String callTime) {
         ZonedDateTime parsed = parse(callTime);
         if (parsed == null) {
             return false;
         }
         Duration age = Duration.between(parsed, ZonedDateTime.now(WINNIPEG));
-        return !age.isNegative() && age.compareTo(Duration.ofHours(24)) <= 0;
+        Duration window = Duration.ofHours(cityOfWinnipegService.getCallWindowHours());
+        return !age.isNegative() && age.compareTo(window) <= 0;
     }
 
     private String formatCallTime(String timestamp) {

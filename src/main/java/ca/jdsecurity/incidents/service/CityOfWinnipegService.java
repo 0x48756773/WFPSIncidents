@@ -33,27 +33,40 @@ public class CityOfWinnipegService {
     private final String path;
     private final int limit;
     private final int closedWindowHours;
+    private final int callWindowHours;
 
     public CityOfWinnipegService(
             @Value("${secret.cityOfWinnipeg}") String secret,
             @Value("${endpoint.cityOfWinnipeg.host}") String host,
             @Value("${endpoint.cityOfWinnipeg.path}") String path,
             @Value("${endpoint.cityOfWinnipeg.limit:200}") int limit,
-            @Value("${endpoint.cityOfWinnipeg.closedWindowHours:2}") int closedWindowHours) {
+            @Value("${endpoint.cityOfWinnipeg.closedWindowHours:2}") int closedWindowHours,
+            @Value("${endpoint.cityOfWinnipeg.callWindowHours:24}") int callWindowHours) {
         this.secret = secret;
         this.host = host;
         this.path = path;
         this.limit = limit;
         this.closedWindowHours = closedWindowHours;
+        this.callWindowHours = callWindowHours;
+    }
+
+    /** How far back incidents are kept, by call time. Shared with the retention filter in Database. */
+    public int getCallWindowHours() {
+        return callWindowHours;
     }
 
     public List<HashMap<String, Object>> getAllIncidents() throws JsonProcessingException, UnirestException {
-        log.info("Retrieving incidents from City of Winnipeg (open + closed within last {}h)", closedWindowHours);
+        log.info("Retrieving incidents from City of Winnipeg (called within last {}h; open or closed within last {}h)",
+                callWindowHours, closedWindowHours);
 
-        String closedThreshold = LocalDateTime.now(WINNIPEG)
-                .minusHours(closedWindowHours)
-                .format(SOQL_TIMESTAMP);
-        String where = "closed_time IS NULL OR closed_time > '" + closedThreshold + "'";
+        LocalDateTime now = LocalDateTime.now(WINNIPEG);
+        String closedThreshold = now.minusHours(closedWindowHours).format(SOQL_TIMESTAMP);
+        // Bound by call time as well. Without it the query also matches every incident that
+        // was never given a closed_time — hundreds of stale records the retention filter
+        // discards anyway, which crowd out displayable incidents under $limit.
+        String callThreshold = now.minusHours(callWindowHours).format(SOQL_TIMESTAMP);
+        String where = "call_time > '" + callThreshold + "'"
+                + " AND (closed_time IS NULL OR closed_time > '" + closedThreshold + "')";
 
         HttpResponse<JsonNode> jsonResponse = Unirest.get(this.host + this.path)
                 .header("$$app_token", this.secret)
@@ -70,7 +83,10 @@ public class CityOfWinnipegService {
 
         JSONArray incidentArray = jsonResponse.getBody().getArray();
         if (incidentArray.length() == this.limit) {
-            log.warn("API returned exactly the {}-record limit; some incidents may have been truncated", this.limit);
+            // Every record returned is now displayable, so hitting the limit means the map is
+            // genuinely missing incidents (the oldest by call time) rather than dropping stale ones.
+            log.warn("API returned exactly the {}-record limit; the oldest incidents in the {}h window "
+                    + "are being dropped. Raise endpoint.cityOfWinnipeg.limit.", this.limit, callWindowHours);
         }
 
         List<HashMap<String, Object>> incidentList = new ArrayList<>();
