@@ -5,12 +5,16 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @Controller
 public class AppController {
+
+    private static final DateTimeFormatter DISPLAY = DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' HH:mm z");
 
     private final Database database;
 
@@ -37,6 +41,14 @@ public class AppController {
 
         model.addAttribute("incidents", incidentList);
         model.addAttribute("neighbourhoodList", neighbourhoodList);
+        // Freshness the crawler can read. The countdown badge in the table legend is
+        // client-rendered and points at the *next* refresh; this is the last completed one.
+        // Left null before the first successful sync so the page cannot claim a stale time.
+        ZonedDateTime lastSync = database.getLastSuccessfulSync();
+        model.addAttribute("lastUpdatedIso",
+                lastSync == null ? null : lastSync.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+        model.addAttribute("lastUpdatedDisplay",
+                lastSync == null ? null : lastSync.format(DISPLAY));
         model.addAttribute("dataSourceAvailable", database.isDataSourceAvailable());
         return "index";
     }

@@ -23,6 +23,13 @@ body {
     text-align: center;
 }
 
+.page-updated {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin: 0 auto 0.5rem;
+    text-align: center;
+}
+
 .emergency-notice {
     background-color: #fff4f4;
     border: 1px solid #f1c2c2;
@@ -360,6 +367,10 @@ html.dark-mode .site-footer {
 
 html.dark-mode .site-footer a {
     color: #6c757d;
+}
+
+html.dark-mode .page-updated {
+    color: #adb5bd;
 }
 
 html.dark-mode .emergency-notice {

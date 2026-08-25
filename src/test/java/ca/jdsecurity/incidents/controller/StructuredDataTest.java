@@ -11,6 +11,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,6 +53,27 @@ class StructuredDataTest {
             }
         }
         throw new AssertionError("no " + type + " node in @graph");
+    }
+
+    /** Freshness must be machine-readable, not only painted in by client-side JS. */
+    @Test
+    void lastUpdatedRendersAsAMachineReadableTimeElement() throws Exception {
+        org.mockito.Mockito.when(database.getLastSuccessfulSync()).thenReturn(
+                ZonedDateTime.of(2026, 8, 25, 9, 30, 0, 0, ZoneId.of("America/Winnipeg")));
+
+        String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("datetime=\"2026-08-25T09:30:00-05:00\"");
+    }
+
+    /** Before the first successful sync there is no honest timestamp to show, so show none. */
+    @Test
+    void lastUpdatedIsAbsentBeforeAnySuccessfulSync() throws Exception {
+        org.mockito.Mockito.when(database.getLastSuccessfulSync()).thenReturn(null);
+
+        String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        assertThat(html).doesNotContain("page-updated");
     }
 
     @Test
