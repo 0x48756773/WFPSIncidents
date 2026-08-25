@@ -14,6 +14,9 @@
     <meta property="og:title" content="About the data – WFPS Active Incident Map">
     <meta property="og:description" content="Where the incident data comes from, what it covers, and what it cannot tell you.">
 
+    <!-- Feed autodiscovery: how a reader finds the feed without being told the URL. -->
+    <link rel="alternate" type="application/atom+xml" title="WFPS recent incidents" th:href="${baseUrl} + '/feed.xml'">
+
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -32,7 +35,8 @@
         <p class="prose-lead">
             An independent map of emergency incidents attended by the Winnipeg Fire Paramedic Service,
             built from the City of Winnipeg&rsquo;s published open data. It is maintained by
-            Johnathan Drozdowski and is <strong>not affiliated with WFPS or the City of Winnipeg</strong>.
+            <span th:text="${authorName}">Johnathan Drozdowski</span> and is
+            <strong>not affiliated with WFPS or the City of Winnipeg</strong>.
         </p>
 
         <p class="emergency-notice" role="note">

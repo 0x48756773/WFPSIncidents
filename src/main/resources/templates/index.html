@@ -77,7 +77,7 @@
         {
           "@type": "Person",
           "@id": "[[${baseUrl}]]/#author",
-          "name": "Johnathan Drozdowski",
+          "name": "[[${authorName}]]",
           "sameAs": "https://github.com/0x48756773"
         },
         {
@@ -100,6 +100,9 @@
       ]
     }
     </script>
+
+    <!-- Feed autodiscovery: how a reader finds the feed without being told the URL. -->
+    <link rel="alternate" type="application/atom+xml" title="WFPS recent incidents" th:href="${baseUrl} + '/feed.xml'">
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -258,6 +261,10 @@
     </section>
 
     <footer class="site-footer">
+        <a href="/about">About the data</a>
+        <span class="site-footer-sep">&middot;</span>
+        <a href="/feed.xml">Feed</a>
+        <span class="site-footer-sep">&middot;</span>
         <a href="https://github.com/0x48756773/WFPSIncidents" target="_blank" rel="noopener">View on GitHub</a>
         <span class="site-footer-sep">&middot;</span>
         <span id="contact-link"></span>

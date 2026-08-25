@@ -216,8 +216,11 @@ public class Database {
             row.put("NEIGHBOURHOOD", rs.getString("neighbourhood"));
             row.put("WARD", rs.getString("ward"));
             row.put("CALL_TIME", formatCallTime(rawCallTime));
+            // Machine-readable counterparts, for the feed and for <time datetime> markup.
+            row.put("CALL_TIME_ISO", toIso(rawCallTime));
             row.put("CLOSED", closed);
             row.put("CLOSED_TIME", closed ? formatCallTime(rawClosedTime) : "");
+            row.put("CLOSED_TIME_ISO", closed ? toIso(rawClosedTime) : "");
             row.put("DURATION", closed ? formatDuration(rawCallTime, rawClosedTime) : "");
             return row;
         });
@@ -254,6 +257,11 @@ public class Database {
         }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d'" + suffix + "', yyyy '@ 'H:mm:ss");
         return parsed.format(formatter);
+    }
+
+    private String toIso(String timestamp) {
+        ZonedDateTime parsed = parse(timestamp);
+        return parsed == null ? "" : parsed.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
     private String formatDuration(String callTime, String closedTime) {

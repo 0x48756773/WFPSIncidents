@@ -15,12 +15,21 @@ public class SiteIdentityAdvice {
 
     private final String baseUrl;
     private final String contactEmail;
+    private final String authorName;
 
     public SiteIdentityAdvice(
             @Value("${app.baseUrl}") String baseUrl,
-            @Value("${app.contactEmail}") String contactEmail) {
+            @Value("${app.contactEmail}") String contactEmail,
+            @Value("${app.authorName}") String authorName) {
         this.baseUrl = stripTrailingSlash(baseUrl);
         this.contactEmail = contactEmail;
+        this.authorName = authorName;
+    }
+
+    /** Named author. Attribution is an E-E-A-T signal, so it lives in one place, not three. */
+    @ModelAttribute("authorName")
+    public String authorName() {
+        return authorName;
     }
 
     /** Canonical origin with no trailing slash, e.g. {@code https://wfps.redspectrum.ca}. */
