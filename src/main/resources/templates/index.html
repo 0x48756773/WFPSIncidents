@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>WFPS Active Incident Map – Winnipeg Fire Paramedic Service</title>
+    <title th:text="${pageTitle}">Winnipeg Fire Incidents – Live WFPS Active Incident Map</title>
 
     <!-- Google Analytics -->
     <!-- Google tag (gtag.js) -->
@@ -20,54 +17,92 @@
     </script>
 
     <!-- SEO -->
-    <meta name="description" content="Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents. Track real-time fire, medical, and emergency responses across Winnipeg neighbourhoods.">
-    <meta name="keywords" content="WFPS, Winnipeg Fire Paramedic Service, Winnipeg fire, Winnipeg incidents, active incidents, emergency response, Winnipeg 911, fire map, EMS Winnipeg">
+    <meta name="description" th:content="${pageDescription}">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://wfps.jdsecurity.ca/">
+    <link rel="canonical" th:href="${baseUrl} + '/'">
 
     <!-- Open Graph (Facebook, LinkedIn previews) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wfps.jdsecurity.ca/">
-    <meta property="og:title" content="WFPS Active Incident Map – Winnipeg Fire Paramedic Service">
-    <meta property="og:description" content="Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents including fire, medical, and other emergency responses.">
-    <meta property="og:image" content="https://wfps.jdsecurity.ca/og-preview.png">
+    <meta property="og:url" th:content="${baseUrl} + '/'">
+    <meta property="og:title" th:content="${pageTitle}">
+    <meta property="og:description" th:content="${pageDescription}">
+    <meta property="og:image" th:content="${baseUrl} + '/og-preview.png'">
+    <meta property="og:image:alt" content="Map of Winnipeg with colour-coded markers showing active fire rescue, medical response and other Winnipeg Fire Paramedic Service incidents.">
     <meta property="og:image:width" content="929">
     <meta property="og:image:height" content="819">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://wfps.jdsecurity.ca/">
-    <meta name="twitter:title" content="WFPS Active Incident Map – Winnipeg Fire Paramedic Service">
-    <meta name="twitter:description" content="Live map of active Winnipeg Fire Paramedic Service incidents. Track real-time fire, medical, and emergency responses across Winnipeg.">
-    <meta name="twitter:image" content="https://wfps.jdsecurity.ca/og-preview.png">
+    <meta name="twitter:url" th:content="${baseUrl} + '/'">
+    <meta name="twitter:title" th:content="${pageTitle}">
+    <meta name="twitter:description" th:content="${pageDescription}">
+    <meta name="twitter:image" th:content="${baseUrl} + '/og-preview.png'">
+    <meta name="twitter:image:alt" content="Map of Winnipeg with colour-coded markers showing active fire rescue, medical response and other Winnipeg Fire Paramedic Service incidents.">
 
     <!-- Schema.org structured data -->
-    <script type="application/ld+json">
+    <!--
+      Structured data. Note what is deliberately absent: this site is not marked up as an
+      EmergencyService or GovernmentService, because it is neither. WFPS appears only as the
+      subject of the application, and the City of Winnipeg only as the creator of the source
+      data. Dataset carries no update-frequency property because Schema.org has none.
+    -->
+    <script type="application/ld+json" th:inline="text">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "WFPS Active Incident Map",
-      "url": "https://wfps.jdsecurity.ca/",
-      "description": "Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents. Track real-time fire, medical, and emergency responses across Winnipeg neighbourhoods.",
-      "applicationCategory": "UtilityApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "CAD"
-      },
-      "provider": {
-        "@type": "Organization",
-        "name": "Winnipeg Fire Paramedic Service",
-        "url": "https://www.winnipeg.ca/fire"
-      },
-      "about": {
-        "@type": "Thing",
-        "name": "Winnipeg Fire Paramedic Service Incidents",
-        "description": "Active emergency incidents attended by the Winnipeg Fire Paramedic Service, including fire rescue, medical responses, and other emergency calls."
-      }
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "[[${baseUrl}]]/#app",
+          "name": "WFPS Active Incident Map",
+          "url": "[[${baseUrl}]]/",
+          "description": "[[${pageDescription}]]",
+          "applicationCategory": "UtilityApplication",
+          "operatingSystem": "Web",
+          "isAccessibleForFree": true,
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CAD"
+          },
+          "author": { "@id": "[[${baseUrl}]]/#author" },
+          "publisher": { "@id": "[[${baseUrl}]]/#author" },
+          "isBasedOn": { "@id": "[[${baseUrl}]]/#dataset" },
+          "sameAs": "https://github.com/0x48756773/WFPSIncidents",
+          "about": {
+            "@type": "Thing",
+            "name": "Winnipeg Fire Paramedic Service incidents",
+            "description": "Emergency incidents attended by the Winnipeg Fire Paramedic Service, including fire rescue calls, medical responses, and other emergency dispatches."
+          }
+        },
+        {
+          "@type": "Person",
+          "@id": "[[${baseUrl}]]/#author",
+          "name": "[[${authorName}]]",
+          "sameAs": "https://github.com/0x48756773"
+        },
+        {
+          "@type": "Dataset",
+          "@id": "[[${baseUrl}]]/#dataset",
+          "name": "Winnipeg Fire Paramedic Service incident dispatches",
+          "description": "Fire rescue, medical response and other emergency calls attended by the Winnipeg Fire Paramedic Service, published by the City of Winnipeg on a five-minute cycle and checked here every [[${refreshLabel}]].",
+          "isAccessibleForFree": true,
+          "creator": {
+            "@type": "GovernmentOrganization",
+            "name": "City of Winnipeg",
+            "url": "https://www.winnipeg.ca/"
+          },
+          "distribution": {
+            "@type": "DataDownload",
+            "encodingFormat": "application/json",
+            "contentUrl": "https://data.winnipeg.ca/resource/yg42-q284.json"
+          }
+        }
+      ]
     }
     </script>
+
+    <!-- Feed autodiscovery: how a reader finds the feed without being told the URL. -->
+    <link rel="alternate" type="application/atom+xml" title="WFPS recent incidents" th:href="${baseUrl} + '/feed.xml'">
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -75,14 +110,24 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="manifest" href="/site.webmanifest">
 
-    <link rel="stylesheet" href="https://bootswatch.com/5/minty/bootstrap.css" />
+    <link rel="stylesheet" th:href="@{/vendor/fonts/montserrat.css}">
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/vendor/leaflet/leaflet.css}">
     <link rel="stylesheet" href="/css/main.css">
 </head>
 
 <body>
 <div class="container-fluid app-shell">
     <h1 class="page-title">WFPS Active Incident Map</h1>
-    <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every 5 minutes from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
+    <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every <span th:text="${refreshLabel}">minute</span> from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
+
+    <p class="page-updated" th:if="${lastUpdatedIso != null}">
+        Last updated <time th:datetime="${lastUpdatedIso}" th:text="${lastUpdatedDisplay}"></time>
+    </p>
+
+    <p class="page-about-link">
+        <a href="/about">Read more about the data, its limits and how this site is built</a>
+    </p>
 
     <div th:if="${!dataSourceAvailable}" class="alert alert-warning" role="alert">
         <strong>Data source unavailable.</strong> The City of Winnipeg Open Data portal could not be reached. Incident data shown may be outdated. The page will automatically display fresh data once the source comes back online.
@@ -115,6 +160,14 @@
             </div>
         </div>
     </div>
+
+    <p class="emergency-notice" role="note">
+        <strong>In an emergency, call 911.</strong>
+        This is an unofficial map built from the City of Winnipeg&rsquo;s published open data. It is not an
+        emergency service, is not monitored, and is not affiliated with the Winnipeg Fire Paramedic Service
+        or the City of Winnipeg. Incidents appear only after WFPS publishes them and may be incomplete or
+        later corrected.
+    </p>
 
     <details class="incident-table-panel" open>
         <summary class="incident-table-toggle">
@@ -173,7 +226,47 @@
         </div>
     </details>
 
+    <details class="page-notes">
+        <summary class="page-notes-toggle">
+            <h2>About this incident map</h2>
+        </summary>
+        <p>
+            This map shows emergency calls attended by the Winnipeg Fire Paramedic Service, drawn from
+            the incident feed WFPS has published from its computer-aided dispatch system since August
+            2023. It reads the same data the City publishes and refreshes every five minutes. It is an
+            independent project, not affiliated with WFPS or the City of Winnipeg.
+        </p>
+
+        <h3>What the markers show &mdash; and what they do not</h3>
+        <p>
+            The published data locates a call to a <strong>neighbourhood, never an address</strong>.
+            Each marker sits at an offset from its neighbourhood&rsquo;s centre so that several calls in
+            one area stay legible, constrained to remain inside that neighbourhood&rsquo;s boundary.
+            Read a marker as <em>somewhere in this neighbourhood</em> and nothing finer. Calls the feed
+            reports as <code>Outside Winnipeg</code> or <code>Unverified</code> have no usable location
+            and are never plotted.
+        </p>
+
+        <h3>Active and recently closed calls</h3>
+        <p>
+            A call is active while units remain assigned to it. Once it closes, this map keeps it
+            visible for a short window &mdash; marked <em>Closed</em>, with the time units spent on
+            scene &mdash; before it drops off. The City&rsquo;s own page shows active calls only.
+        </p>
+
+        <h3>How calls are grouped</h3>
+        <p>
+            WFPS publishes a free-text incident type. The three colours here &mdash; Fire Rescue,
+            Medical Response and Other &mdash; are this site&rsquo;s own grouping for readability, not
+            an official classification. The exact published type always appears in the table.
+        </p>
+    </details>
+
     <footer class="site-footer">
+        <a href="/about">About the data</a>
+        <span class="site-footer-sep">&middot;</span>
+        <a href="/feed.xml">Feed</a>
+        <span class="site-footer-sep">&middot;</span>
         <a href="https://github.com/0x48756773/WFPSIncidents" target="_blank" rel="noopener">View on GitHub</a>
         <span class="site-footer-sep">&middot;</span>
         <span id="contact-link"></span>
@@ -182,8 +275,15 @@
 
 <!-- Server-rendered incident data; all behaviour lives in the cacheable /scripts/maps.js -->
 <script th:inline="javascript">
-    window.WFPS_DATA = { incidents: /*[[${incidents}]]*/ [] };
+    window.WFPS_DATA = {
+        incidents: /*[[${incidents}]]*/ [],
+        refreshSeconds: /*[[${refreshSeconds}]]*/ 60,
+        contactUser: /*[[${contactUser}]]*/ '',
+        contactDomain: /*[[${contactDomain}]]*/ ''
+    };
 </script>
+<script th:src="@{/scripts/contact.js}" defer></script>
+<script th:src="@{/vendor/leaflet/leaflet.js}" defer></script>
 <script th:src="@{/scripts/maps.js}" defer></script>
 </body>
 </html>

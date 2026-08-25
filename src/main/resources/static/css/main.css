@@ -19,8 +19,44 @@ body {
     color: #6c757d;
     font-size: 0.9rem;
     margin: 0 auto 0.75rem;
-    max-width: 72ch;
+    max-width: min(96ch, 100%);
     text-align: center;
+}
+
+.map-panel-unavailable {
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    color: #6c757d;
+    display: flex;
+    font-size: 0.9rem;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+}
+
+.page-updated {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin: 0 auto 0.5rem;
+    text-align: center;
+}
+
+.emergency-notice {
+    background-color: #fff4f4;
+    border: 1px solid #f1c2c2;
+    border-radius: 0.375rem;
+    color: #713b3b;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    margin: 0.75rem auto;
+    max-width: min(104ch, 100%);
+    padding: 0.6rem 0.9rem;
+    text-align: center;
+}
+
+.emergency-notice strong {
+    color: #a12626;
 }
 
 .map-wrapper {
@@ -345,6 +381,26 @@ html.dark-mode .site-footer a {
     color: #6c757d;
 }
 
+html.dark-mode .map-panel-unavailable {
+    background-color: #2c2f33;
+    border-color: #3d4045;
+    color: #adb5bd;
+}
+
+html.dark-mode .page-updated {
+    color: #adb5bd;
+}
+
+html.dark-mode .emergency-notice {
+    background-color: #3a2626;
+    border-color: #5c3a3a;
+    color: #e8b4b4;
+}
+
+html.dark-mode .emergency-notice strong {
+    color: #ff8080;
+}
+
 html.dark-mode .alert-warning {
     background-color: #3d3000;
     border-color: #5c4800;
@@ -432,3 +488,105 @@ html.dark-mode .map-settings-title {
     }
 }
 
+
+/* ---- Long-form prose (homepage notes and /about) ---- */
+
+.page-notes,
+.prose-page {
+    color: #495057;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 1.5rem auto 0;
+    max-width: min(104ch, 100%);
+}
+
+.prose-page {
+    margin-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.page-notes h2,
+.prose-page h2 {
+    font-size: 1.15rem;
+    margin-top: 1.5rem;
+}
+
+.page-notes h3,
+.prose-page h3 {
+    font-size: 1rem;
+    margin-top: 1.25rem;
+}
+
+.prose-lead {
+    font-size: 1rem;
+}
+
+.page-notes code,
+.prose-page code {
+    background-color: #f1f3f5;
+    border-radius: 0.2rem;
+    font-size: 0.85em;
+    padding: 0.1rem 0.3rem;
+}
+
+.page-notes-more,
+.prose-back {
+    margin-top: 1.25rem;
+}
+
+html.dark-mode .page-notes,
+html.dark-mode .prose-page {
+    color: #ced4da;
+}
+
+html.dark-mode .page-notes code,
+html.dark-mode .prose-page code {
+    background-color: #2c2f33;
+}
+
+/* ---- Collapsible "About this incident map" ---- */
+
+.page-notes > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.page-notes > summary::-webkit-details-marker {
+    display: none;
+}
+
+.page-notes-toggle h2 {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.4rem;
+    margin: 0;
+}
+
+/* Rotates to point down when the section is open. */
+.page-notes-toggle h2::before {
+    border-left: 0.4em solid currentColor;
+    border-top: 0.3em solid transparent;
+    border-bottom: 0.3em solid transparent;
+    content: "";
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.page-notes[open] > summary .page-notes-toggle h2::before,
+.page-notes[open] > .page-notes-toggle h2::before {
+    transform: rotate(90deg);
+}
+
+.page-notes > summary:hover h2 {
+    color: #6c757d;
+}
+
+.page-about-link {
+    font-size: 0.9rem;
+    margin: 0 auto 0.75rem;
+    text-align: center;
+}
+
+html.dark-mode .page-notes > summary:hover h2 {
+    color: #adb5bd;
+}

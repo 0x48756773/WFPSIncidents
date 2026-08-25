@@ -1,0 +1,36 @@
+/*
+ * Montserrat (latin subset, weights used by the Bootswatch Minty theme).
+ *
+ * Replaces the @import that shipped inside bootstrap.min.css. An @import buried in a
+ * 229K render-blocking stylesheet serialises badly: the browser must fetch and parse
+ * the CSS before it even discovers the font request, then open two further origins
+ * (fonts.googleapis.com, then fonts.gstatic.com) before any text can paint in the
+ * intended face. Self-hosted, the font is a same-origin request on the existing
+ * connection, discoverable as soon as the <head> is parsed.
+ *
+ * font-display: swap is kept from the original import — text paints immediately in the
+ * fallback face rather than staying invisible while the font loads.
+ */
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/vendor/fonts/montserrat-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/vendor/fonts/montserrat-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/vendor/fonts/montserrat-latin-700-normal.woff2') format('woff2');
+}

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Repository
 public class Database {
@@ -43,9 +45,18 @@ public class Database {
             "INSERT INTO incidents (incident_number, incident_type, is_motor, units, neighbourhood, ward, call_time, closed_time) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
+    /**
+     * Minimum gap between upstream fetches triggered by a page request. Without it, an
+     * outage turns every page load into its own blocking call to a failing API.
+     */
+    private static final Duration RECOVERY_COOLDOWN = Duration.ofMinutes(1);
+
     private final JdbcTemplate jdbc;
     private final CityOfWinnipegService cityOfWinnipegService;
+    private final ReentrantLock syncLock = new ReentrantLock();
     private volatile boolean dataSourceAvailable = true;
+    private volatile ZonedDateTime lastSuccessfulSync;
+    private volatile Instant lastSyncAttempt = Instant.EPOCH;
 
     public Database(JdbcTemplate jdbc, CityOfWinnipegService cityOfWinnipegService) {
         this.jdbc = jdbc;
@@ -54,6 +65,15 @@ public class Database {
 
     public boolean isDataSourceAvailable() {
         return dataSourceAvailable;
+    }
+
+    /**
+     * When the incident table was last rebuilt from a successful fetch, or {@code null}
+     * if no sync has succeeded yet. Drives the sitemap's {@code lastmod}, which is the
+     * one freshness hint in a sitemap that Google actually reads.
+     */
+    public ZonedDateTime getLastSuccessfulSync() {
+        return lastSuccessfulSync;
     }
 
     @PostConstruct
@@ -126,10 +146,53 @@ public class Database {
         jdbc.batchUpdate(INSERT_SQL, batch);
 
         dataSourceAvailable = true;
+        lastSuccessfulSync = ZonedDateTime.now(WINNIPEG);
         log.info("City of Winnipeg incident sync completed ({} incidents)", batch.size());
     }
 
+    /** Background sync (startup and the scheduled job). Waits its turn if one is already running. */
     public void syncIncidentsTableSafe() {
+        syncLock.lock();
+        try {
+            runSyncRecordingAttempt();
+        } finally {
+            syncLock.unlock();
+        }
+    }
+
+    /**
+     * Best-effort sync for a request that found an empty table. Returns immediately —
+     * without contacting the API — if another sync is in flight or one was attempted
+     * within {@link #RECOVERY_COOLDOWN}.
+     *
+     * <p>The empty-table case is not "startup hasn't finished": {@code @PostConstruct} runs
+     * before the app accepts traffic, so by the time a request arrives the initial sync has
+     * already run. An empty table therefore means that sync <em>failed</em> — precisely when
+     * retrying on every request is most harmful. Unbounded, it makes each page load block on
+     * a failing upstream call, which slows crawlers to the point of depressing crawl rate.
+     */
+    public void tryRecoverySync() {
+        if (attemptedRecently() || !syncLock.tryLock()) {
+            return;
+        }
+        try {
+            // Re-check under the lock: a sync may have completed while we waited to acquire it.
+            if (attemptedRecently()) {
+                return;
+            }
+            runSyncRecordingAttempt();
+        } finally {
+            syncLock.unlock();
+        }
+    }
+
+    private boolean attemptedRecently() {
+        return Duration.between(lastSyncAttempt, Instant.now()).compareTo(RECOVERY_COOLDOWN) < 0;
+    }
+
+    /** Caller must hold {@link #syncLock}. Records the attempt before it runs, so a slow failure still opens the breaker. */
+    private void runSyncRecordingAttempt() {
+        lastSyncAttempt = Instant.now();
         try {
             syncIncidentsTable();
         } catch (Exception e) {
@@ -153,8 +216,11 @@ public class Database {
             row.put("NEIGHBOURHOOD", rs.getString("neighbourhood"));
             row.put("WARD", rs.getString("ward"));
             row.put("CALL_TIME", formatCallTime(rawCallTime));
+            // Machine-readable counterparts, for the feed and for <time datetime> markup.
+            row.put("CALL_TIME_ISO", toIso(rawCallTime));
             row.put("CLOSED", closed);
             row.put("CLOSED_TIME", closed ? formatCallTime(rawClosedTime) : "");
+            row.put("CLOSED_TIME_ISO", closed ? toIso(rawClosedTime) : "");
             row.put("DURATION", closed ? formatDuration(rawCallTime, rawClosedTime) : "");
             return row;
         });
@@ -191,6 +257,11 @@ public class Database {
         }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d'" + suffix + "', yyyy '@ 'H:mm:ss");
         return parsed.format(formatter);
+    }
+
+    private String toIso(String timestamp) {
+        ZonedDateTime parsed = parse(timestamp);
+        return parsed == null ? "" : parsed.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
     private String formatDuration(String callTime, String closedTime) {
