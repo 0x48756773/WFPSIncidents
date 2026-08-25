@@ -251,7 +251,7 @@ Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** 
 
 | ID | Finding | Sev | Effort |
 |---|---|---|---|
-| **F07** | **Title doesn't lead with the contested phrase.** Adopt `Winnipeg Fire Incidents – Live WFPS Active Incident Map`. *Ships after F01 settles.* | P1 | S |
+| ~~**F07**~~ | ✅ **Shipped 2026-08-25**, without a baseline — see the measurement note in the implementation plan. ~~**Title doesn't lead with the contested phrase.**~~ Adopt `Winnipeg Fire Incidents – Live WFPS Active Incident Map`. *Ships after F01 settles.* | P1 | S |
 | **F08** | **No heading hierarchy.** One `<h1>`, then a `<summary>`. No `<h2>`/`<h3>` anywhere. | P1 | S |
 | **F09** | **JSON-LD misattributes the app to WFPS.** `provider` names Winnipeg Fire Paramedic Service. Set `provider`/`author` to the actual operator, move WFPS to `sourceOrganization`, and add a visible non-affiliation disclaimer. | P1 | S |
 | **F10** | **No explanatory prose and no `/about` page.** E-E-A-T gap against a government incumbent on a public-safety topic. | P1 | M |
@@ -304,8 +304,10 @@ Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** 
 
 ## 5. Two things that must not happen
 
-1. **Do not ship F01 (migration) and F07 (title rewrite) together.** If rankings move, we won't know
-   which caused it. Migrate, let it settle, then touch metadata.
+1. ~~**Do not ship F01 (migration) and F07 (title rewrite) together.**~~ **Overtaken by events.** The
+   baseline could not be captured before the migration, so there was nothing left for the separation
+   to protect. Both have now shipped and their effects are confounded. The rule still holds for the
+   *next* change: pick one variable, note the date, and let it settle.
 2. **Do not ship F13 (programmatic pages) before F12 (history).** Empty generated pages are worse
    than no pages — that is site-level risk, not page-level.
 

@@ -17,6 +17,15 @@ public class AppController {
 
     private static final DateTimeFormatter DISPLAY = DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' HH:mm z");
 
+    // Leads with the phrase the page competes for, while keeping WFPS — the acronym the site
+    // already ranks for. The full service name is carried by the description, the subtitle and
+    // the structured data, so dropping it here does not remove it from the page.
+    private static final String PAGE_TITLE =
+            "Winnipeg Fire Incidents – Live WFPS Active Incident Map";
+    private static final String PAGE_DESCRIPTION =
+            "Live map of Winnipeg fire incidents, medical responses and rescue calls, updated every "
+                    + "5 minutes from Winnipeg Fire Paramedic Service dispatch data.";
+
     private final Database database;
 
     public AppController(Database database) {
@@ -61,6 +70,10 @@ public class AppController {
                 lastSync == null ? null : lastSync.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         model.addAttribute("lastUpdatedDisplay",
                 lastSync == null ? null : lastSync.format(DISPLAY));
+        // One source for the title and description: they appear three times each in the head
+        // (plain, Open Graph, Twitter) and drift between copies otherwise.
+        model.addAttribute("pageTitle", PAGE_TITLE);
+        model.addAttribute("pageDescription", PAGE_DESCRIPTION);
         model.addAttribute("dataSourceAvailable", available);
         return "index";
     }

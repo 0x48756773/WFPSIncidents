@@ -91,8 +91,8 @@ Starts only once Phase 1 has settled and been measured.
 
 | # | Task | Finding |
 |---|---|---|
-| 2.1 | **Title →** `Winnipeg Fire Incidents – Live WFPS Active Incident Map`. Update the OG and Twitter titles to match. Ship this **alone**, and measure it. | F07 |
-| 2.2 | Rewrite the meta description along Gemini's suggested lines. Drop `<meta name="keywords">`. Add `og:image:alt` and `twitter:site`. | F07, F18, F19 |
+| 2.1 | ✅ **Shipped 2026-08-25.** Title is now `Winnipeg Fire Incidents – Live WFPS Active Incident Map` (55 chars). | F07 |
+| 2.2 | ✅ **Shipped.** Description rewritten (148 chars, leads with the target phrase, states the 5-minute cadence). `keywords` dropped and image alt text added earlier. `twitter:site` still omitted — it needs a real account handle. | F07, F18, F19 |
 | 2.3 | **Fix the JSON-LD attribution:** `provider`/`author` become the actual operator; WFPS moves to `sourceOrganization`. Add the `Dataset` block — with `temporalCoverage`, `creator`, `distribution` and `license`, and **without** the non-existent `updateFrequency` field. | F09 |
 | 2.4 | **Add a visible non-affiliation disclaimer** in the footer: not affiliated with WFPS or the City of Winnipeg; data sourced from the Open Data portal. | F09 |
 | 2.5 | **Add prose and heading structure.** `<h2>` sections below the map: how WFPS dispatches, what the categories mean, where the data comes from, what the limitations are (neighbourhood-level only, `Unverified` early records). Written for readers — no keyword padding. Build `/about` as the long-form version. | F08, F10, F17 |
@@ -102,6 +102,12 @@ Starts only once Phase 1 has settled and been measured.
 | 2.10 | **Add an RSS/Atom feed** at `/feed.xml`. Syndication and links without broadcasting live emergencies. | F25 |
 
 **Exit:** one indexable page that is substantially better than it is today, plus `/about`.
+
+> **Measurement note.** 2.1 and 2.2 shipped together on **2026-08-25**, without the Phase 0.2
+> baseline — it could not be captured before the migration. Ranking movement from here is therefore
+> **not attributable** to either the domain move or the retitle; the two are confounded. Search
+> Console still holds the history, so use its date-comparison against **2026-08-25** to eyeball
+> before/after by hand. Treat the result as a signal, not a measurement.
 
 ---
 
