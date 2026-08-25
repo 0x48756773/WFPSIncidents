@@ -49,7 +49,7 @@ body {
     color: #713b3b;
     font-size: 0.85rem;
     line-height: 1.45;
-    margin: 1rem auto 0.5rem;
+    margin: 0.75rem auto;
     max-width: min(104ch, 100%);
     padding: 0.6rem 0.9rem;
     text-align: center;
