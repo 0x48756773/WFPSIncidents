@@ -19,7 +19,7 @@ body {
     color: #6c757d;
     font-size: 0.9rem;
     margin: 0 auto 0.75rem;
-    max-width: 72ch;
+    max-width: min(96ch, 100%);
     text-align: center;
 }
 
@@ -49,9 +49,9 @@ body {
     color: #713b3b;
     font-size: 0.85rem;
     line-height: 1.45;
-    margin: 0 auto 0.75rem;
-    max-width: 72ch;
-    padding: 0.5rem 0.75rem;
+    margin: 1rem auto 0.5rem;
+    max-width: min(104ch, 100%);
+    padding: 0.6rem 0.9rem;
     text-align: center;
 }
 
@@ -497,7 +497,7 @@ html.dark-mode .map-settings-title {
     font-size: 0.92rem;
     line-height: 1.6;
     margin: 1.5rem auto 0;
-    max-width: 72ch;
+    max-width: min(104ch, 100%);
 }
 
 .prose-page {
@@ -542,4 +542,51 @@ html.dark-mode .prose-page {
 html.dark-mode .page-notes code,
 html.dark-mode .prose-page code {
     background-color: #2c2f33;
+}
+
+/* ---- Collapsible "About this incident map" ---- */
+
+.page-notes > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.page-notes > summary::-webkit-details-marker {
+    display: none;
+}
+
+.page-notes-toggle h2 {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.4rem;
+    margin: 0;
+}
+
+/* Rotates to point down when the section is open. */
+.page-notes-toggle h2::before {
+    border-left: 0.4em solid currentColor;
+    border-top: 0.3em solid transparent;
+    border-bottom: 0.3em solid transparent;
+    content: "";
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.page-notes[open] > summary .page-notes-toggle h2::before,
+.page-notes[open] > .page-notes-toggle h2::before {
+    transform: rotate(90deg);
+}
+
+.page-notes > summary:hover h2 {
+    color: #6c757d;
+}
+
+.page-about-link {
+    font-size: 0.9rem;
+    margin: 0 auto 0.75rem;
+    text-align: center;
+}
+
+html.dark-mode .page-notes > summary:hover h2 {
+    color: #adb5bd;
 }

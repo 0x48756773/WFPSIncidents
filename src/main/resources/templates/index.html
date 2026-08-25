@@ -125,12 +125,8 @@
         Last updated <time th:datetime="${lastUpdatedIso}" th:text="${lastUpdatedDisplay}"></time>
     </p>
 
-    <p class="emergency-notice" role="note">
-        <strong>In an emergency, call 911.</strong>
-        This is an unofficial map built from the City of Winnipeg&rsquo;s published open data. It is not an
-        emergency service, is not monitored, and is not affiliated with the Winnipeg Fire Paramedic Service
-        or the City of Winnipeg. Incidents appear only after WFPS publishes them and may be incomplete or
-        later corrected.
+    <p class="page-about-link">
+        <a href="/about">Read more about the data, its limits and how this site is built</a>
     </p>
 
     <div th:if="${!dataSourceAvailable}" class="alert alert-warning" role="alert">
@@ -222,8 +218,10 @@
         </div>
     </details>
 
-    <section class="page-notes">
-        <h2>About this incident map</h2>
+    <details class="page-notes">
+        <summary class="page-notes-toggle">
+            <h2>About this incident map</h2>
+        </summary>
         <p>
             This map shows emergency calls attended by the Winnipeg Fire Paramedic Service, drawn from
             the incident feed WFPS has published from its computer-aided dispatch system since August
@@ -254,11 +252,15 @@
             Medical Response and Other &mdash; are this site&rsquo;s own grouping for readability, not
             an official classification. The exact published type always appears in the table.
         </p>
+    </details>
 
-        <p class="page-notes-more">
-            <a href="/about">Read more about the data, its limits and how this site is built</a>
-        </p>
-    </section>
+    <p class="emergency-notice" role="note">
+        <strong>In an emergency, call 911.</strong>
+        This is an unofficial map built from the City of Winnipeg&rsquo;s published open data. It is not an
+        emergency service, is not monitored, and is not affiliated with the Winnipeg Fire Paramedic Service
+        or the City of Winnipeg. Incidents appear only after WFPS publishes them and may be incomplete or
+        later corrected.
+    </p>
 
     <footer class="site-footer">
         <a href="/about">About the data</a>
