@@ -23,6 +23,23 @@ body {
     text-align: center;
 }
 
+.emergency-notice {
+    background-color: #fff4f4;
+    border: 1px solid #f1c2c2;
+    border-radius: 0.375rem;
+    color: #713b3b;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    margin: 0 auto 0.75rem;
+    max-width: 72ch;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+}
+
+.emergency-notice strong {
+    color: #a12626;
+}
+
 .map-wrapper {
     position: relative;
 }
@@ -343,6 +360,16 @@ html.dark-mode .site-footer {
 
 html.dark-mode .site-footer a {
     color: #6c757d;
+}
+
+html.dark-mode .emergency-notice {
+    background-color: #3a2626;
+    border-color: #5c3a3a;
+    color: #e8b4b4;
+}
+
+html.dark-mode .emergency-notice strong {
+    color: #ff8080;
 }
 
 html.dark-mode .alert-warning {
