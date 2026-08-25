@@ -42,30 +42,64 @@
     <meta name="twitter:image" th:content="${baseUrl} + '/og-preview.png'">
 
     <!-- Schema.org structured data -->
+    <!--
+      Structured data. Note what is deliberately absent: this site is not marked up as an
+      EmergencyService or GovernmentService, because it is neither. WFPS appears only as the
+      subject of the application, and the City of Winnipeg only as the creator of the source
+      data. Dataset carries no update-frequency property because Schema.org has none.
+    -->
     <script type="application/ld+json" th:inline="text">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "WFPS Active Incident Map",
-      "url": "[[${baseUrl}]]/",
-      "description": "Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents. Track real-time fire, medical, and emergency responses across Winnipeg neighbourhoods.",
-      "applicationCategory": "UtilityApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "CAD"
-      },
-      "provider": {
-        "@type": "Organization",
-        "name": "Winnipeg Fire Paramedic Service",
-        "url": "https://www.winnipeg.ca/fire"
-      },
-      "about": {
-        "@type": "Thing",
-        "name": "Winnipeg Fire Paramedic Service Incidents",
-        "description": "Active emergency incidents attended by the Winnipeg Fire Paramedic Service, including fire rescue, medical responses, and other emergency calls."
-      }
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "[[${baseUrl}]]/#app",
+          "name": "WFPS Active Incident Map",
+          "url": "[[${baseUrl}]]/",
+          "description": "Live map of active Winnipeg Fire Paramedic Service (WFPS) incidents. Track real-time fire, medical, and emergency responses across Winnipeg neighbourhoods.",
+          "applicationCategory": "UtilityApplication",
+          "operatingSystem": "Web",
+          "isAccessibleForFree": true,
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CAD"
+          },
+          "author": { "@id": "[[${baseUrl}]]/#author" },
+          "publisher": { "@id": "[[${baseUrl}]]/#author" },
+          "isBasedOn": { "@id": "[[${baseUrl}]]/#dataset" },
+          "sameAs": "https://github.com/0x48756773/WFPSIncidents",
+          "about": {
+            "@type": "Thing",
+            "name": "Winnipeg Fire Paramedic Service incidents",
+            "description": "Emergency incidents attended by the Winnipeg Fire Paramedic Service, including fire rescue calls, medical responses, and other emergency dispatches."
+          }
+        },
+        {
+          "@type": "Person",
+          "@id": "[[${baseUrl}]]/#author",
+          "name": "Johnathan Drozdowski",
+          "sameAs": "https://github.com/0x48756773"
+        },
+        {
+          "@type": "Dataset",
+          "@id": "[[${baseUrl}]]/#dataset",
+          "name": "Winnipeg Fire Paramedic Service incident dispatches",
+          "description": "Fire rescue, medical response and other emergency calls attended by the Winnipeg Fire Paramedic Service, published by the City of Winnipeg and refreshed here every five minutes.",
+          "isAccessibleForFree": true,
+          "creator": {
+            "@type": "GovernmentOrganization",
+            "name": "City of Winnipeg",
+            "url": "https://www.winnipeg.ca/"
+          },
+          "distribution": {
+            "@type": "DataDownload",
+            "encodingFormat": "application/json",
+            "contentUrl": "https://data.winnipeg.ca/resource/yg42-q284.json"
+          }
+        }
+      ]
     }
     </script>
 
