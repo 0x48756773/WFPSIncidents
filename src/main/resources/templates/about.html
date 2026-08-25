@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>About the data – WFPS Active Incident Map</title>
+
+    <meta name="description" content="Where the Winnipeg Fire Paramedic Service incident data on this map comes from, what it covers, how markers are placed, and what the data cannot tell you.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" th:href="${baseUrl} + '/about'">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" th:content="${baseUrl} + '/about'">
+    <meta property="og:title" content="About the data – WFPS Active Incident Map">
+    <meta property="og:description" content="Where the incident data comes from, what it covers, and what it cannot tell you.">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+
+    <link rel="stylesheet" th:href="@{/vendor/fonts/montserrat.css}">
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap/bootstrap.min.css}">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+<div class="container-fluid app-shell">
+    <article class="prose-page">
+        <h1>About this map</h1>
+
+        <p class="prose-lead">
+            An independent map of emergency incidents attended by the Winnipeg Fire Paramedic Service,
+            built from the City of Winnipeg&rsquo;s published open data. It is maintained by
+            Johnathan Drozdowski and is <strong>not affiliated with WFPS or the City of Winnipeg</strong>.
+        </p>
+
+        <p class="emergency-notice" role="note">
+            <strong>In an emergency, call 911.</strong>
+            This site is not an emergency service and is not monitored.
+        </p>
+
+        <h2>Where the data comes from</h2>
+        <p>
+            Since 8 August 2023 the Winnipeg Fire Paramedic Service has published incident information
+            drawn from its computer-aided dispatch (CAD) system, updated every five minutes. This site
+            reads that same published feed &mdash; the
+            <a href="https://data.winnipeg.ca/Fire-and-Rescue-Response/WFPS-Call-Logs/yg42-q284" target="_blank" rel="noopener">WFPS Call Logs</a>
+            dataset on the
+            <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>
+            &mdash; and refreshes on the same five-minute cycle.
+        </p>
+        <p>
+            The feed carries an incident number, the incident type, the time of the call, the units
+            dispatched, the neighbourhood, the Council ward, whether the call involved a motor vehicle,
+            and &mdash; once the call ends &mdash; the time it closed. Nothing else is published, and
+            nothing here is added to it.
+        </p>
+
+        <h2>What &ldquo;active&rdquo; means</h2>
+        <p>
+            WFPS treats an incident as active while one or more units are assigned to it and the
+            incident is ongoing. The City&rsquo;s own incident page shows only active calls: once a
+            call closes it disappears from that page and passes into the historical dataset, which
+            reaches back to 2015.
+        </p>
+        <p>
+            This map keeps a call visible for <span th:text="${closedWindowHours}">2</span> hours after
+            it closes, marked <em>Closed</em> with the time units spent on scene, and shows calls from
+            the past <span th:text="${callWindowHours}">24</span> hours.
+        </p>
+
+        <h2>What the markers show &mdash; and what they do not</h2>
+        <p>
+            <strong>The map does not show where an incident happened.</strong> The published data
+            locates a call only to a neighbourhood, never to an address. Each marker is drawn at an
+            offset from its neighbourhood&rsquo;s centre &mdash; far enough apart that several calls in
+            one neighbourhood stay legible, and constrained so the marker still falls inside that
+            neighbourhood&rsquo;s boundary.
+        </p>
+        <p>
+            That position is deliberately approximate. Read a marker as
+            <em>somewhere in this neighbourhood</em> and nothing finer.
+        </p>
+        <p>
+            Two values that appear in the feed are not places at all: <code>Outside Winnipeg</code> and
+            <code>Unverified</code>. Neither is ever plotted, because placing them anywhere would
+            invent a location the data does not contain.
+        </p>
+
+        <h2>The colour categories are this site&rsquo;s, not WFPS&rsquo;s</h2>
+        <p>
+            WFPS publishes a free-text incident type. To make the map readable, this site sorts those
+            types into three groups:
+        </p>
+        <ul>
+            <li><strong>Fire Rescue</strong> &mdash; types beginning &ldquo;Fire Rescue&rdquo;</li>
+            <li><strong>Medical Response</strong> &mdash; types containing &ldquo;Medical Response&rdquo;</li>
+            <li><strong>Other</strong> &mdash; everything else</li>
+        </ul>
+        <p>
+            That grouping is an editorial convenience, not an official classification, and it is coarser
+            than the categories WFPS itself uses. The exact published incident type is always shown in
+            the table.
+        </p>
+
+        <h2>What this data cannot tell you</h2>
+        <ul>
+            <li>
+                <strong>It is not a complete picture of an incident.</strong> A call&rsquo;s type is
+                recorded at dispatch and reflects what was reported, which is not always what
+                responders found.
+            </li>
+            <li>
+                <strong>Early records can change.</strong> The feed&rsquo;s own <code>Unverified</code>
+                value exists because information at the start of a call is provisional.
+            </li>
+            <li>
+                <strong>Unit counts are not severity.</strong> The number of units dispatched follows
+                dispatch policy for a call type; it is not a measure of how serious an incident is.
+            </li>
+            <li>
+                <strong>Gaps are possible.</strong> If the Open Data portal is unreachable, this page
+                shows the last data successfully retrieved and says so at the top.
+            </li>
+        </ul>
+
+        <h2>How it is built</h2>
+        <p>
+            The source is public on
+            <a href="https://github.com/0x48756773/WFPSIncidents" target="_blank" rel="noopener">GitHub</a>.
+            It is a Spring Boot application rendering the incident table server-side, with
+            <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a> and
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+            tiles for the map. Neighbourhood boundaries come from the City&rsquo;s own
+            neighbourhood boundary dataset.
+        </p>
+
+        <h2>Corrections</h2>
+        <p>
+            If something here is wrong &mdash; a mistaken description, a marker in the wrong
+            neighbourhood, a misread field &mdash; please say so and it will be fixed.
+            Errors in the underlying data need to go to the City of Winnipeg; this site only
+            reproduces what the feed publishes.
+        </p>
+
+        <p class="prose-back"><a href="/">&larr; Back to the incident map</a></p>
+    </article>
+
+    <footer class="site-footer">
+        <a href="https://github.com/0x48756773/WFPSIncidents" target="_blank" rel="noopener">View on GitHub</a>
+        <span class="site-footer-sep">&middot;</span>
+        <span id="contact-link"></span>
+    </footer>
+</div>
+
+<script th:inline="javascript">
+    window.WFPS_DATA = {
+        contactUser: /*[[${contactUser}]]*/ '',
+        contactDomain: /*[[${contactDomain}]]*/ ''
+    };
+</script>
+<script th:src="@{/scripts/contact.js}" defer></script>
+</body>
+</html>

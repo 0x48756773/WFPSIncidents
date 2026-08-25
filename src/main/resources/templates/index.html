@@ -219,6 +219,44 @@
         </div>
     </details>
 
+    <section class="page-notes">
+        <h2>About this incident map</h2>
+        <p>
+            This map shows emergency calls attended by the Winnipeg Fire Paramedic Service, drawn from
+            the incident feed WFPS has published from its computer-aided dispatch system since August
+            2023. It reads the same data the City publishes and refreshes every five minutes. It is an
+            independent project, not affiliated with WFPS or the City of Winnipeg.
+        </p>
+
+        <h3>What the markers show &mdash; and what they do not</h3>
+        <p>
+            The published data locates a call to a <strong>neighbourhood, never an address</strong>.
+            Each marker sits at an offset from its neighbourhood&rsquo;s centre so that several calls in
+            one area stay legible, constrained to remain inside that neighbourhood&rsquo;s boundary.
+            Read a marker as <em>somewhere in this neighbourhood</em> and nothing finer. Calls the feed
+            reports as <code>Outside Winnipeg</code> or <code>Unverified</code> have no usable location
+            and are never plotted.
+        </p>
+
+        <h3>Active and recently closed calls</h3>
+        <p>
+            A call is active while units remain assigned to it. Once it closes, this map keeps it
+            visible for a short window &mdash; marked <em>Closed</em>, with the time units spent on
+            scene &mdash; before it drops off. The City&rsquo;s own page shows active calls only.
+        </p>
+
+        <h3>How calls are grouped</h3>
+        <p>
+            WFPS publishes a free-text incident type. The three colours here &mdash; Fire Rescue,
+            Medical Response and Other &mdash; are this site&rsquo;s own grouping for readability, not
+            an official classification. The exact published type always appears in the table.
+        </p>
+
+        <p class="page-notes-more">
+            <a href="/about">Read more about the data, its limits and how this site is built</a>
+        </p>
+    </section>
+
     <footer class="site-footer">
         <a href="https://github.com/0x48756773/WFPSIncidents" target="_blank" rel="noopener">View on GitHub</a>
         <span class="site-footer-sep">&middot;</span>
@@ -234,6 +272,7 @@
         contactDomain: /*[[${contactDomain}]]*/ ''
     };
 </script>
+<script th:src="@{/scripts/contact.js}" defer></script>
 <script th:src="@{/vendor/leaflet/leaflet.js}" defer></script>
 <script th:src="@{/scripts/maps.js}" defer></script>
 </body>

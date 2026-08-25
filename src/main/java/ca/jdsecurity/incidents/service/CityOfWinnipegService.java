@@ -55,6 +55,11 @@ public class CityOfWinnipegService {
         return callWindowHours;
     }
 
+    /** How long a closed incident stays visible. Surfaced on /about so the page cannot misstate it. */
+    public int getClosedWindowHours() {
+        return closedWindowHours;
+    }
+
     public List<HashMap<String, Object>> getAllIncidents() throws JsonProcessingException, UnirestException {
         log.info("Retrieving incidents from City of Winnipeg (called within last {}h; open or closed within last {}h)",
                 callWindowHours, closedWindowHours);

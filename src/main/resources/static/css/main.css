@@ -488,3 +488,58 @@ html.dark-mode .map-settings-title {
     }
 }
 
+
+/* ---- Long-form prose (homepage notes and /about) ---- */
+
+.page-notes,
+.prose-page {
+    color: #495057;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 1.5rem auto 0;
+    max-width: 72ch;
+}
+
+.prose-page {
+    margin-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.page-notes h2,
+.prose-page h2 {
+    font-size: 1.15rem;
+    margin-top: 1.5rem;
+}
+
+.page-notes h3,
+.prose-page h3 {
+    font-size: 1rem;
+    margin-top: 1.25rem;
+}
+
+.prose-lead {
+    font-size: 1rem;
+}
+
+.page-notes code,
+.prose-page code {
+    background-color: #f1f3f5;
+    border-radius: 0.2rem;
+    font-size: 0.85em;
+    padding: 0.1rem 0.3rem;
+}
+
+.page-notes-more,
+.prose-back {
+    margin-top: 1.25rem;
+}
+
+html.dark-mode .page-notes,
+html.dark-mode .prose-page {
+    color: #ced4da;
+}
+
+html.dark-mode .page-notes code,
+html.dark-mode .prose-page code {
+    background-color: #2c2f33;
+}

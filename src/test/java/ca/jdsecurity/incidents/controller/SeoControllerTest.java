@@ -61,6 +61,15 @@ class SeoControllerTest {
                         org.hamcrest.Matchers.containsString("<lastmod>"))));
     }
 
+    @Test
+    void sitemapListsTheAboutPage() throws Exception {
+        when(database.getLastSuccessfulSync()).thenReturn(null);
+
+        mockMvc.perform(get("/sitemap.xml"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "<loc>https://example.test/about</loc>")));
+    }
+
     /** Both are ignored by Google; emitting them implies a control we do not have. */
     @Test
     void sitemapOmitsChangefreqAndPriority() throws Exception {

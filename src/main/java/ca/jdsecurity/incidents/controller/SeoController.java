@@ -49,13 +49,18 @@ public class SeoController {
                 ? ""
                 : "        <lastmod>%s</lastmod>\n".formatted(lastSync.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
 
+        // /about carries no lastmod: it changes only on deploy, and the sync time that
+        // dates the incident list says nothing about when this copy was last edited.
         return """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
                     <url>
                         <loc>%s/</loc>
                 %s    </url>
+                    <url>
+                        <loc>%s/about</loc>
+                    </url>
                 </urlset>
-                """.formatted(baseUrl, lastmod);
+                """.formatted(baseUrl, lastmod, baseUrl);
     }
 }
