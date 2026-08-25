@@ -310,9 +310,14 @@
     // --- Neighbourhood boundaries ---
     // Loaded up front (rather than lazily for the outline overlay) because marker
     // placement depends on them: see jitterCoordinates.
+    //
+    // Served from our own origin rather than fetched from data.winnipeg.ca directly. The page
+    // reloads every minute, so hitting the City for this on every load meant one request per
+    // tab per minute for a file that changes about as often as ward boundaries do. The server
+    // holds one copy for everyone and sends cache headers, so the browser rarely re-asks.
     const neighbourhoodFeaturesByName = new Map();
     const neighbourhoodInteriorPoints = new Map();
-    const neighbourhoodGeoJsonReady = fetch('https://data.winnipeg.ca/resource/8k6x-xxsy.geojson')
+    const neighbourhoodGeoJsonReady = fetch('/data/neighbourhoods.geojson')
         .then(r => r.json())
         .then(data => {
             for (const feature of data.features || []) {
