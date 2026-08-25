@@ -22,9 +22,11 @@ public class AppController {
     public String getIncidents(Model model) {
         List<Map<String, Object>> incidentList = database.getRecentIncidents();
 
-        // Fallback in case the page is requested before the initial sync has populated the table.
+        // An empty table means the last sync failed, so try once to recover. Rate-limited
+        // inside the repository: during an outage this must not make every page load block
+        // on its own failing upstream call.
         if (incidentList.isEmpty()) {
-            database.syncIncidentsTableSafe();
+            database.tryRecoverySync();
             incidentList = database.getRecentIncidents();
         }
 
