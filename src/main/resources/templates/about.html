@@ -52,7 +52,9 @@
             <a href="https://data.winnipeg.ca/Fire-and-Rescue-Response/WFPS-Call-Logs/yg42-q284" target="_blank" rel="noopener">WFPS Call Logs</a>
             dataset on the
             <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>
-            &mdash; and refreshes on the same five-minute cycle.
+            &mdash; and checks it for new calls every <span th:text="${refreshLabel}">minute</span>.
+            Polling more often than the City publishes does not make the data fresher than its source;
+            it shortens the gap between a call being published and appearing here.
         </p>
         <p>
             The feed carries an incident number, the incident type, the time of the call, the units

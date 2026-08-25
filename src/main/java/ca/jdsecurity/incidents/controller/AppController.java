@@ -1,5 +1,6 @@
 package ca.jdsecurity.incidents.controller;
 
+import ca.jdsecurity.incidents.configuration.RefreshCadence;
 import ca.jdsecurity.incidents.database.Database;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,14 +23,16 @@ public class AppController {
     // the structured data, so dropping it here does not remove it from the page.
     private static final String PAGE_TITLE =
             "Winnipeg Fire Incidents – Live WFPS Active Incident Map";
-    private static final String PAGE_DESCRIPTION =
+    private static final String PAGE_DESCRIPTION_TEMPLATE =
             "Live map of Winnipeg fire incidents, medical responses and rescue calls, updated every "
-                    + "5 minutes from Winnipeg Fire Paramedic Service dispatch data.";
+                    + "%s from Winnipeg Fire Paramedic Service dispatch data.";
 
     private final Database database;
+    private final RefreshCadence refreshCadence;
 
-    public AppController(Database database) {
+    public AppController(Database database, RefreshCadence refreshCadence) {
         this.database = database;
+        this.refreshCadence = refreshCadence;
     }
 
     @GetMapping(value = "/")
@@ -73,7 +76,8 @@ public class AppController {
         // One source for the title and description: they appear three times each in the head
         // (plain, Open Graph, Twitter) and drift between copies otherwise.
         model.addAttribute("pageTitle", PAGE_TITLE);
-        model.addAttribute("pageDescription", PAGE_DESCRIPTION);
+        model.addAttribute("pageDescription",
+                PAGE_DESCRIPTION_TEMPLATE.formatted(refreshCadence.getLabel()));
         model.addAttribute("dataSourceAvailable", available);
         return "index";
     }

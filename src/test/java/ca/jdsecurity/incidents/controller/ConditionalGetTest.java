@@ -3,8 +3,10 @@ package ca.jdsecurity.incidents.controller;
 import ca.jdsecurity.incidents.database.Database;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import ca.jdsecurity.incidents.configuration.RefreshCadence;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AppController.class)
+@Import(RefreshCadence.class)
 @TestPropertySource(properties = {
         "app.baseUrl=https://example.test",
         "app.contactEmail=hello@example.test"

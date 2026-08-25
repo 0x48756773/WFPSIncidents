@@ -4,8 +4,10 @@ import ca.jdsecurity.incidents.database.Database;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import ca.jdsecurity.incidents.configuration.RefreshCadence;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * hold them together without pinning the wording, so the copy can still be rewritten freely.
  */
 @WebMvcTest(AppController.class)
+@Import(RefreshCadence.class)
 @TestPropertySource(properties = {
         "app.baseUrl=https://example.test",
         "app.contactEmail=hello@example.test",

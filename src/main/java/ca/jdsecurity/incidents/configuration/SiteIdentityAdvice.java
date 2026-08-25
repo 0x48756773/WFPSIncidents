@@ -16,14 +16,28 @@ public class SiteIdentityAdvice {
     private final String baseUrl;
     private final String contactEmail;
     private final String authorName;
+    private final RefreshCadence refreshCadence;
 
     public SiteIdentityAdvice(
             @Value("${app.baseUrl}") String baseUrl,
             @Value("${app.contactEmail}") String contactEmail,
-            @Value("${app.authorName}") String authorName) {
+            @Value("${app.authorName}") String authorName,
+            RefreshCadence refreshCadence) {
         this.baseUrl = stripTrailingSlash(baseUrl);
         this.contactEmail = contactEmail;
         this.authorName = authorName;
+        this.refreshCadence = refreshCadence;
+    }
+
+    /** Reads after "every", so the copy states the configured cadence rather than a literal. */
+    @ModelAttribute("refreshLabel")
+    public String refreshLabel() {
+        return refreshCadence.getLabel();
+    }
+
+    @ModelAttribute("refreshSeconds")
+    public int refreshSeconds() {
+        return refreshCadence.getSeconds();
     }
 
     /** Named author. Attribution is an E-E-A-T signal, so it lives in one place, not three. */

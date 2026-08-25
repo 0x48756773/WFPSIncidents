@@ -84,7 +84,7 @@
           "@type": "Dataset",
           "@id": "[[${baseUrl}]]/#dataset",
           "name": "Winnipeg Fire Paramedic Service incident dispatches",
-          "description": "Fire rescue, medical response and other emergency calls attended by the Winnipeg Fire Paramedic Service, published by the City of Winnipeg and refreshed here every five minutes.",
+          "description": "Fire rescue, medical response and other emergency calls attended by the Winnipeg Fire Paramedic Service, published by the City of Winnipeg on a five-minute cycle and checked here every [[${refreshLabel}]].",
           "isAccessibleForFree": true,
           "creator": {
             "@type": "GovernmentOrganization",
@@ -119,7 +119,7 @@
 <body>
 <div class="container-fluid app-shell">
     <h1 class="page-title">WFPS Active Incident Map</h1>
-    <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every 5 minutes from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
+    <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every <span th:text="${refreshLabel}">minute</span> from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
 
     <p class="page-updated" th:if="${lastUpdatedIso != null}">
         Last updated <time th:datetime="${lastUpdatedIso}" th:text="${lastUpdatedDisplay}"></time>
@@ -277,6 +277,7 @@
 <script th:inline="javascript">
     window.WFPS_DATA = {
         incidents: /*[[${incidents}]]*/ [],
+        refreshSeconds: /*[[${refreshSeconds}]]*/ 60,
         contactUser: /*[[${contactUser}]]*/ '',
         contactDomain: /*[[${contactDomain}]]*/ ''
     };

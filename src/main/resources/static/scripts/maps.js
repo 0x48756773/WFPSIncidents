@@ -776,7 +776,8 @@
     }
 
     // --- Auto-refresh countdown ---
-    const REFRESH_SECONDS = 5 * 60;
+    // Matches the server's polling interval, passed through so the two cannot drift.
+    const REFRESH_SECONDS = (window.WFPS_DATA && window.WFPS_DATA.refreshSeconds) || 60;
     let countdown = REFRESH_SECONDS;
     const refreshBadge = document.getElementById('refresh-badge');
 
