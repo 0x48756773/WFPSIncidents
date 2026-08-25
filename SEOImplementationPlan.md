@@ -38,6 +38,11 @@ but shouldn't wait.
 | 0.4 | **Verify `wfps.redspectrum.ca` in Search Console** now, so it has history before the migration. | F01 |
 | 0.5 | **Add SRI to the Bootswatch stylesheet** across all four templates, or fold it into the self-hosting work in 3.1. | F04 |
 
+> **Status:** 0.1–0.4 are still outstanding. Phase 1's code tasks shipped ahead of them because
+> the live site was serving a canonical pointing at a domain that redirected back to it — a
+> conflicting signal worth clearing immediately. **0.2 (Search Console baselines) is now partly
+> unrecoverable** for the pre-migration window; capture whatever the 16-month report still holds.
+
 **Exit:** baselines committed, token rotated, both properties verified.
 
 ---
@@ -48,14 +53,16 @@ The highest-risk phase. We currently hold a #1 for `WFPS`; a botched migration l
 
 | # | Task | Finding |
 |---|---|---|
-| 1.1 | Add `app.baseUrl` to `application.properties`. Inject it into `AppController` and expose it to Thymeleaf, replacing all 9 hardcoded occurrences of `wfps.jdsecurity.ca`. | F02 |
-| 1.2 | Convert `robots.txt` and `sitemap.xml` from static files to controller-rendered routes so both pick up `app.baseUrl`. (`sitemap.xml` gets rebuilt properly in 2.6.) | F02, F14 |
-| 1.3 | Point `maps.js`'s contact-link builder at a value passed from the server rather than its hardcoded `d = 'jdsecurity.ca'`. | F16, F02 |
-| 1.4 | Deploy `wfps.redspectrum.ca` with a valid certificate. **Serve both domains, identical content, canonical on both pointing at redspectrum.** Confirm indexing starts before cutting over. | F01 |
-| 1.5 | **301 (permanent) every `jdsecurity.ca` URL to its redspectrum equivalent** — path-preserving, not a blanket redirect to `/`. | F01 |
+| 1.1 | ✅ **Done.** `app.baseUrl` added; `SiteIdentityAdvice` (`@ControllerAdvice`) publishes it to every view. All 9 hardcoded occurrences replaced — canonical, `og:url`, `og:image`, `twitter:url`, `twitter:image`, JSON-LD `url`, robots, sitemap, contact link. | F02 |
+| 1.2 | ✅ **Done.** `robots.txt` and `sitemap.xml` are now `SeoController` routes. Static copies deleted. Sitemap also picked up a real `<lastmod>` and dropped the ignored `changefreq`/`priority`, closing F14 early. | F02, F14 |
+| 1.3 | ✅ **Done.** Contact halves come from the server via `WFPS_DATA`. **Left pointing at `wfps@jdsecurity.ca` deliberately** — the mailbox is independent of the site domain. Change `app.contactEmail` if it has moved. | F16, F02 |
+| 1.4 | ✅ **Done** (infrastructure). `wfps.redspectrum.ca` is serving. | F01 |
+| 1.5 | ✅ **Done** (infrastructure). `jdsecurity.ca` 301s to `redspectrum.ca`. **Verify the redirect is path-preserving**, not a blanket redirect to `/`. | F01 |
 | 1.6 | File the **Search Console change-of-address** from `jdsecurity.ca` to `redspectrum.ca`. | F01 |
 | 1.7 | Update the external links we control: the GitHub repo description and README, and the LinkedIn post that currently links the old domain. | F21 |
 | 1.8 | **Keep `jdsecurity.ca` registered and redirecting indefinitely.** Letting it lapse discards every inbound link. | F01 |
+
+**Remaining:** 1.6 (change-of-address filing), 1.7 (update external links), 1.8 (keep the old domain renewed).
 
 **Exit:** `redspectrum.ca` indexed, old URLs 301ing, change-of-address accepted.
 **Then wait 2–4 weeks and re-measure against 0.2 before starting Phase 2.**
@@ -76,7 +83,6 @@ Starts only once Phase 1 has settled and been measured.
 | 2.3 | **Fix the JSON-LD attribution:** `provider`/`author` become the actual operator; WFPS moves to `sourceOrganization`. Add the `Dataset` block — with `temporalCoverage`, `creator`, `distribution` and `license`, and **without** the non-existent `updateFrequency` field. | F09 |
 | 2.4 | **Add a visible non-affiliation disclaimer** in the footer: not affiliated with WFPS or the City of Winnipeg; data sourced from the Open Data portal. | F09 |
 | 2.5 | **Add prose and heading structure.** `<h2>` sections below the map: how WFPS dispatches, what the categories mean, where the data comes from, what the limitations are (neighbourhood-level only, `Unverified` early records). Written for readers — no keyword padding. Build `/about` as the long-form version. | F08, F10, F17 |
-| 2.6 | **Server-render the sitemap** with a real `<lastmod>` from the last successful sync. Drop `changefreq` and `priority`. | F14 |
 | 2.7 | **Server-render a `<time datetime="…">` last-updated stamp** near the `<h1>`, sourced from the sync timestamp — so freshness is visible to crawlers, not just to `maps.js`. | F11 |
 | 2.8 | **Verify error status codes:** `/404` must return HTTP 404, `/500` must return 500, and both templates need `<meta name="robots" content="noindex">`. | F15 |
 

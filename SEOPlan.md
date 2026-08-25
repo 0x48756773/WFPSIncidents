@@ -169,8 +169,8 @@ Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** 
 
 | ID | Finding | Sev | Effort |
 |---|---|---|---|
-| **F01** | **Domain migration to `wfps.redspectrum.ca`.** All ranking equity sits on `jdsecurity.ca`. Needs 301s from every old URL, canonical/OG/sitemap rewrite, a Search Console change-of-address, and the old domain kept alive and redirecting indefinitely. Get this wrong and the WFPS #1 is gone. | P0 | M |
-| **F02** | **Domain hardcoded in 9 places** across `index.html`, `sitemap.xml`, `robots.txt`, `maps.js`. Guarantees drift. Extract to one `app.baseUrl` property and template every reference from it. | P0 | S |
+| **F01** | 🔶 **In progress** — 301s live, code migrated; change-of-address still to file. **Domain migration to `wfps.redspectrum.ca`.** All ranking equity sits on `jdsecurity.ca`. Needs 301s from every old URL, canonical/OG/sitemap rewrite, a Search Console change-of-address, and the old domain kept alive and redirecting indefinitely. Get this wrong and the WFPS #1 is gone. | P0 | M |
+| ~~**F02**~~ | ✅ **Resolved.** ~~**Domain hardcoded in 9 places**~~ across `index.html`, `sitemap.xml`, `robots.txt`, `maps.js`. Guarantees drift. Extract to one `app.baseUrl` property and template every reference from it. | P0 | S |
 | **F03** | **API token committed to a public repo.** `application.properties` is git-tracked with a live `secret.cityOfWinnipeg` value, contradicting `CLAUDE.md`. *Not an SEO issue — flagged because it was found. Rotate the token and untrack the file.* | P0 | S |
 | **F04** | **Bootstrap CSS loaded from `bootswatch.com` with no SRI hash**, on all four templates. The Leaflet tags carry `integrity`; this one doesn't. A third-party stylesheet that can change under us on every page load. | P0 | S |
 
@@ -190,7 +190,7 @@ Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** 
 | **F09** | **JSON-LD misattributes the app to WFPS.** `provider` names Winnipeg Fire Paramedic Service. Set `provider`/`author` to the actual operator, move WFPS to `sourceOrganization`, and add a visible non-affiliation disclaimer. | P1 | S |
 | **F10** | **No explanatory prose and no `/about` page.** E-E-A-T gap against a government incumbent on a public-safety topic. | P1 | M |
 | **F11** | **Freshness invisible to crawlers.** `#refresh-badge` is populated client-side. Server-render a `<time datetime="…">` last-updated stamp. Our competitor advertises 30-second refresh; we advertise nothing. | P1 | S |
-| **F16** | **Contact email exists only in JS** (`maps.js:823`), so crawlers never see it — and it hardcodes `jdsecurity.ca`, which F01 breaks. | P2 | S |
+| ~~**F16**~~ | ✅ **Resolved** (now server-configured; address itself unchanged). ~~**Contact email exists only in JS**~~ (`maps.js:823`), so crawlers never see it — and it hardcodes `jdsecurity.ca`, which F01 breaks. | P2 | S |
 | **F17** | **Zero internal links.** The only link out of the page body goes to GitHub. No crawl paths, no link equity distribution. Blocks F13. | P2 | S |
 | **F18** | **Missing `og:image:alt` and `twitter:site`.** | P3 | S |
 | **F19** | **`<meta name="keywords">`** — ignored by Google since 2009. Remove. | P3 | S |
@@ -199,7 +199,7 @@ Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** 
 
 | ID | Finding | Sev | Effort |
 |---|---|---|---|
-| **F14** | **Sitemap is static and misconfigured.** `changefreq` and `priority` are ignored by Google; `<lastmod>`, which *is* used, is absent. Generate the sitemap at runtime with an honest `lastmod`. | P1 | S |
+| ~~**F14**~~ | ✅ **Resolved.** ~~**Sitemap is static and misconfigured.**~~ `changefreq` and `priority` are ignored by Google; `<lastmod>`, which *is* used, is absent. Generate the sitemap at runtime with an honest `lastmod`. | P1 | S |
 | **F15** | **Error page status codes unverified.** Confirm `/404` returns HTTP 404 (not 200) and that error templates carry `noindex`. A soft-404 farm is a real risk once F13 adds routes. | P2 | S |
 
 ### Content expansion

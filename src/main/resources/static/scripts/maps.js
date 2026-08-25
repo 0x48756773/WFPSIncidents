@@ -818,12 +818,18 @@
         }
     });
 
-    // Build contact link at runtime to reduce email harvesting
+    // Build contact link at runtime to reduce email harvesting. The two halves arrive
+    // separately in WFPS_DATA so the full address never appears as one string in the HTML.
     (function () {
-        const u = 'wfps', d = 'jdsecurity.ca';
+        const target = document.getElementById('contact-link');
+        const u = (window.WFPS_DATA && window.WFPS_DATA.contactUser) || '';
+        const d = (window.WFPS_DATA && window.WFPS_DATA.contactDomain) || '';
+        if (!target || !u || !d) {
+            return;
+        }
         const a = document.createElement('a');
         a.href = 'mailto:' + u + '@' + d;
         a.textContent = u + '@' + d;
-        document.getElementById('contact-link').appendChild(a);
+        target.appendChild(a);
     })();
 })();

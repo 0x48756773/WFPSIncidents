@@ -46,6 +46,7 @@ public class Database {
     private final JdbcTemplate jdbc;
     private final CityOfWinnipegService cityOfWinnipegService;
     private volatile boolean dataSourceAvailable = true;
+    private volatile ZonedDateTime lastSuccessfulSync;
 
     public Database(JdbcTemplate jdbc, CityOfWinnipegService cityOfWinnipegService) {
         this.jdbc = jdbc;
@@ -54,6 +55,15 @@ public class Database {
 
     public boolean isDataSourceAvailable() {
         return dataSourceAvailable;
+    }
+
+    /**
+     * When the incident table was last rebuilt from a successful fetch, or {@code null}
+     * if no sync has succeeded yet. Drives the sitemap's {@code lastmod}, which is the
+     * one freshness hint in a sitemap that Google actually reads.
+     */
+    public ZonedDateTime getLastSuccessfulSync() {
+        return lastSuccessfulSync;
     }
 
     @PostConstruct
@@ -126,6 +136,7 @@ public class Database {
         jdbc.batchUpdate(INSERT_SQL, batch);
 
         dataSourceAvailable = true;
+        lastSuccessfulSync = ZonedDateTime.now(WINNIPEG);
         log.info("City of Winnipeg incident sync completed ({} incidents)", batch.size());
     }
 
