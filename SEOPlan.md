@@ -161,7 +161,73 @@ web app should be beating a government portal.
 
 ---
 
-## 3. Findings register
+## 3. Beating the source of record
+
+`winnipeg.ca/…/incident-response` cannot be beaten on its own terms, and trying is the wrong plan.
+It is a `.ca` government domain with authority we will not match, and for the query *"Winnipeg fire
+incidents"* it is the source of record answering exactly the question asked.
+
+But it has one structural limitation, stated in its own copy:
+
+> *"An incident is active if there is one (or more) WFPS unit assigned to it and the incident is
+> ongoing. The page is updated every 5 minutes."*
+
+**It only ever shows what is happening right now.** The moment an incident closes, it vanishes from
+that page. There is no official page anywhere that answers *"what was that fire I saw last night?"*
+
+That question is asked constantly and is currently answered by nobody:
+
+- **News outlets only cover newsworthy fires.** Searching retrospective phrasings returns CBC, CTV,
+  ChrisD and Global articles about *unrelated* fires from previous months. The long tail — a garage
+  fire in Windsor Park, why there were six sirens in St. Vital at 2am — has no structured answer.
+- **The city publishes news releases only for major incidents** (`winnipeg.ca/news/…`), a tiny
+  fraction of daily call volume.
+- **The raw data exists** — the Open Data portal holds every call back to 2015 — **but no page
+  presents it.** The gap is not data availability. It is that nobody has built the archive.
+
+### The reframe
+
+> **Do not compete for *"active incidents."* Compete for *"what happened."***
+> The source of record owns the present tense and always will. It has deliberately vacated the past
+> tense, and the past tense is a far larger query space.
+
+This changes what we build and in what order:
+
+| Query intent | Who wins today | Can we win it? |
+|---|---|---|
+| "winnipeg fire incidents" (live, citywide) | `winnipeg.ca` | Hard. Their query, their authority. |
+| "wfps active incidents" | **us**, today | Defend it. Don't break it chasing others. |
+| "fire in [neighbourhood] last night" | **nobody** | **Yes — this is the opening.** |
+| "how many fires in Winnipeg / in my ward" | nobody | **Yes.** Statistical, evergreen, linkable. |
+| "why so many sirens tonight" | nobody | **Yes.** Explanatory content. |
+| "winnipeg fire [date]" | fragmented news | **Yes**, with a date archive. |
+
+Everything in the "yes" column requires **incident history** (F12). That reframes F12 from
+infrastructure-for-programmatic-pages into **the single highest-value item on the roadmap** — it is
+what lets us occupy a category the incumbent structurally cannot.
+
+### The corollary on freshness
+
+We refresh every 5 minutes — **identical to `winnipeg.ca`**. We have no freshness advantage over the
+incumbent at all, and `winnipegfire.live` beats us both at 30 seconds. On the live-incident query we
+are the slowest of the three. Either close that gap (F33) or stop treating live incidents as the
+battleground. Given the reframe above, the second is the better strategy — but if we keep claiming
+"real-time" in the title, the claim should be true.
+
+### One thing we must not do
+
+Do **not** mark the site up as `EmergencyService` or `GovernmentService`, and do not let the copy
+drift toward implying official status. We are a third-party view of published open data. Beyond being
+false, an emergency-service claim invites people to treat the site as a reporting channel. This is
+also why F27 (a visible "call 911, this is not an emergency service" notice) is not optional
+boilerplate.
+
+Related: Google restricted FAQ rich results to authoritative government and health sites in 2023, so
+`winnipeg.ca` can earn them and we cannot. Do not invest in `FAQPage` markup.
+
+---
+
+## 4. Findings register
 
 Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** housekeeping
 
@@ -217,11 +283,33 @@ Severity: **P0** ship first · **P1** high value · **P2** worthwhile · **P3** 
 | **F21** | **Authority gap.** Manual outreach: r/Winnipeg, civic-tech and open-data communities, local news. No automated posting (see G5). | P1 | ongoing |
 | **F22** | **No rank tracking.** We cannot tell whether any of this worked. Baseline Search Console positions for the target queries *before* F01 ships. | P0 | S |
 
+
+### Added after reviewing the source of record
+
+| ID | Finding | Sev | Effort |
+|---|---|---|---|
+| **F23** | **Own the retrospective query space.** `winnipeg.ca` shows only *ongoing* incidents; closed ones disappear. Build the archive it structurally cannot: date pages, per-area history, "what happened" content. **Promotes F12 from infrastructure to the highest-value item on the roadmap.** | P1 | L |
+| **F24** | **Every request triggers a blocking upstream fetch when the table is empty.** `AppController` calls `syncIncidentsTableSafe()` inline on an empty result. During an API outage *every* page load blocks on a failing HTTP call — verified locally: four separate request threads each ran their own failed sync. Googlebot hitting slow or timing-out responses depresses crawl rate. Serve stale data instead, and add a circuit breaker plus a short response cache. | P1 | S |
+| **F25** | **No RSS/Atom feed.** Legitimate syndication, gets picked up by aggregators, earns links, and gives people the subscribe path the rejected social bot was reaching for — without broadcasting live emergencies. | P2 | S |
+| **F26** | **No `BreadcrumbList` schema.** Still a supported rich result and a real CTR lift. Applies once sub-pages exist. | P2 | S |
+| **F27** | **No "not an emergency service" notice.** A visible *call 911 in an emergency; this site is an unofficial view of published data* line. Ethical necessity first, trust signal second. | P1 | S |
+| **F28** | **A second dataset we are not using:** [Fire and paramedic incidents by ward](https://data.winnipeg.ca/Fire-and-Rescue-Response/Fire-and-paramedic-incidents-by-ward/jq3f-ckpm) (`jq3f-ckpm`). Gives ward pages real statistics on day one without waiting on our own backfill. | P1 | M |
+| **F29** | **No per-page OG images.** A generated static map thumbnail per ward/date page lifts social CTR, which drives the sharing that earns links. | P3 | M |
+| **F30** | **No `Last-Modified`/`ETag` on `/`.** Cheap crawl-efficiency and freshness signalling; pairs with the sitemap `lastmod` already shipped. | P3 | S |
+| **F31** | **No IndexNow submission.** Worth wiring for Bing/Yandex. **Google does not support IndexNow**, and its Indexing API is limited to `JobPosting`/`BroadcastEvent` — using it for anything else violates its terms. Do not attempt that shortcut. | P3 | S |
+| **F32** | **No link magnet.** An annual or quarterly "Winnipeg fire and EMS: year in data" report with charts is the realistic way local journalists start citing us — and citations are the only thing that closes an authority gap with a `.ca`. | P1 | M |
+| **F33** | **We are the slowest of the three sites on refresh.** 5 minutes, identical to `winnipeg.ca`; `winnipegfire.live` is at 30 seconds. Either tighten the cadence within the API's rate limits or stop competing on live incidents — and if the title keeps saying "real-time", make it true. | P2 | S |
+
 ---
 
-## 4. Two things that must not happen
+## 5. Two things that must not happen
 
 1. **Do not ship F01 (migration) and F07 (title rewrite) together.** If rankings move, we won't know
    which caused it. Migrate, let it settle, then touch metadata.
 2. **Do not ship F13 (programmatic pages) before F12 (history).** Empty generated pages are worse
    than no pages — that is site-level risk, not page-level.
+
+And one that follows from §3:
+
+3. **Do not present the site as official.** No `EmergencyService`/`GovernmentService` markup, no copy
+   implying WFPS affiliation, and F27's 911 notice ships with the first content change — not later.

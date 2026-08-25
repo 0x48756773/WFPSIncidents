@@ -12,13 +12,26 @@ Three constraints drive the phase order:
   rankings. Shipped together, neither is attributable.
 - **History gates pages.** Programmatic URLs without stored data are empty URLs, and empty URLs at
   scale are a site-level risk.
+- **The archive is the point.** `winnipeg.ca` shows only ongoing incidents, so the retrospective
+  query space is unoccupied (`SEOPlan.md` §3). Phase 4 is not merely plumbing for Phase 5 — it is
+  what unlocks the one category the incumbent cannot serve. Where 5 and 5A compete for time, 5A wins.
 
 ```
-Phase 0  Baseline & safety ──┐
-                             ├─→ Phase 1  Migration ──→ (settle 2–4 wks) ──→ Phase 2  On-page
-Phase 3  Performance ────────┘                                                      │
-                                                                                     ▼
-                             Phase 4  History ──→ Phase 5  Programmatic pages ──→ Phase 6  Authority
+Phase 0  Baseline & safety
+        │
+        ├─→ Phase 1  Migration ──→ (settle 2–4 wks) ──→ Phase 2  On-page ──┐
+        │                                                                  │
+        └─→ Phase 3  Performance ─────────────────────────────────────────┤
+                                                                           ▼
+                                                              Phase 4  History
+                                                                           │
+                                          ┌────────────────────────────────┤
+                                          ▼                                ▼
+                        Phase 5A  Archive  ◀── priority          Phase 5  Entity pages
+                                          │                                │
+                                          └────────────┬───────────────────┘
+                                                       ▼
+                                          Phase 6  Authority & measurement
 ```
 
 Phase 3 is independent of the migration and can run in parallel with Phases 1–2.
@@ -85,6 +98,8 @@ Starts only once Phase 1 has settled and been measured.
 | 2.5 | **Add prose and heading structure.** `<h2>` sections below the map: how WFPS dispatches, what the categories mean, where the data comes from, what the limitations are (neighbourhood-level only, `Unverified` early records). Written for readers — no keyword padding. Build `/about` as the long-form version. | F08, F10, F17 |
 | 2.7 | **Server-render a `<time datetime="…">` last-updated stamp** near the `<h1>`, sourced from the sync timestamp — so freshness is visible to crawlers, not just to `maps.js`. | F11 |
 | 2.8 | **Verify error status codes:** `/404` must return HTTP 404, `/500` must return 500, and both templates need `<meta name="robots" content="noindex">`. | F15 |
+| 2.9 | **Add the "not an emergency service" notice** — *call 911 in an emergency; this is an unofficial view of published open data*. Ships with the first content change, not later. | F27 |
+| 2.10 | **Add an RSS/Atom feed** at `/feed.xml`. Syndication and links without broadcasting live emergencies. | F25 |
 
 **Exit:** one indexable page that is substantially better than it is today, plus `/about`.
 
@@ -101,7 +116,9 @@ Independent of the migration; can run alongside Phases 1–2.
 | 3.3 | **Inline critical CSS** for the header and the table's first rows; load the rest async. | F05 |
 | 3.4 | **Defer `gtag.js`** below the fold. | F06 |
 | 3.5 | Add far-future `Cache-Control` for `/scripts/`, `/css/` and static images; enable response compression. | F05 |
-| 3.6 | **Re-run Lighthouse and diff against 0.3.** Target: LCP < 2.5s, CLS < 0.1 on mobile. | F05 |
+| 3.6 | **Stop fetching upstream inside a request.** `AppController` currently calls `syncIncidentsTableSafe()` inline on an empty result, so during an API outage every page load blocks on a failing HTTP call. Serve stale data, add a circuit breaker, and cache the rendered model briefly. **Crawl-health issue, not just latency.** | F24 |
+| 3.7 | Emit `Last-Modified`/`ETag` on `/` from the last sync time. | F30 |
+| 3.8 | **Re-run Lighthouse and diff against 0.3.** Target: LCP < 2.5s, CLS < 0.1 on mobile. | F05 |
 
 **Exit:** all three Core Web Vitals in the green on mobile.
 
@@ -142,6 +159,26 @@ page-level: generated pages with nothing on them are thin content at scale.
 
 ---
 
+## Phase 5A — The archive (the source-of-record play)
+
+**This is the highest-value phase on the roadmap.** Rationale in `SEOPlan.md` §3: `winnipeg.ca` shows
+only ongoing incidents, so the entire retrospective query space is unoccupied. Runs immediately after
+Phase 4 and takes precedence over Phase 5's live entity pages where the two compete for time.
+
+| # | Task | Finding |
+|---|---|---|
+| 5A.1 | **Daily archive pages** — `/incidents/{yyyy-mm-dd}`: every call that day, counts by category and ward, notable incidents by duration or units dispatched. This is what answers *"what was that fire last night?"* | F23 |
+| 5A.2 | **Pull the ward statistics dataset** (`jq3f-ckpm`) so ward pages carry real historical volume on day one rather than waiting on our own backfill. | F28 |
+| 5A.3 | **Per-area history sections** on ward and neighbourhood pages: recent calls, volume trend, typical response mix. | F23 |
+| 5A.4 | **Explanatory content** for the "why so many sirens tonight" class of query — how dispatch escalates, why several units attend one call, what the categories mean in practice. | F23, F10 |
+| 5A.5 | **`BreadcrumbList` JSON-LD** across the archive hierarchy. | F26 |
+| 5A.6 | **Per-page OG images** — a generated static map thumbnail per ward and date page. | F29 |
+| 5A.7 | **Guard the volume.** Daily pages are ~365/year. Ship a rolling window first and only expand once the template demonstrably clears the substance bar in 5.1. | F23, F13 |
+
+**Exit:** we answer a question no other site answers, on a URL per day and per area.
+
+---
+
 ## Phase 6 — Authority & measurement
 
 Ongoing, starts once there is something worth linking to (post-Phase 2 at the earliest).
@@ -149,6 +186,8 @@ Ongoing, starts once there is something worth linking to (post-Phase 2 at the ea
 | # | Task | Finding |
 |---|---|---|
 | 6.1 | **Weekly aggregate summary pages** — "WFPS call volume, week of X". The linkable, compounding substitute for the auto-posting bot we rejected. | F20 |
+| 6.1b | **Annual "Winnipeg fire and EMS: year in data" report** with charts. The realistic path to local-journalist citations, which are the only thing that closes an authority gap with a `.ca` domain. | F32 |
+| 6.2b | **IndexNow** for Bing/Yandex. Google does not support it, and its Indexing API is `JobPosting`/`BroadcastEvent` only — not a shortcut available to us. | F31 |
 | 6.2 | **Manual outreach:** r/Winnipeg, Winnipeg civic-tech and open-data communities, the City's open-data showcase if it accepts submissions, local news tips. Human posts, not automation. | F21 |
 | 6.3 | Cross-link from our own properties: GitHub profile and repo, LinkedIn, any other owned domains. | F21 |
 | 6.4 | **Monthly ranking review** against the 0.2 baseline for the four target queries. | F22 |
@@ -168,9 +207,14 @@ Rationale in `SEOPlan.md` §G5.
 | **~6 months** | Competitive with `winnipegfire.live` on its own keywords; ranking for long-tail ward and type queries neither competitor covers. |
 | **Stretch** | Above `winnipeg.ca` for `winnipeg fire incidents`. Honest read: this needs real inbound links, and it is a 12-month goal, not a 6-month one. |
 
+Better framing than that stretch goal: **we do not need to outrank `winnipeg.ca` on its own query to
+win.** Ranking first for the retrospective and statistical queries it does not serve is a larger
+addressable audience than second place on *"winnipeg fire incidents"*, and it is winnable this year.
+
 ## Open questions
 
 1. **Analytics continuity** — does `G-FGQZ0FFFV1` follow to the new domain, or is this the moment for a fresh property? Affects whether pre/post comparison is possible in GA.
 2. **Named author for E-E-A-T** — the disclaimer and `/about` page work best with a real name and contact attached. Comfortable with that, or keep it project-branded?
 3. **Derby's ceiling** (task 4.2) — how many years of history do we want to hold, and does that answer force a database change?
-4. **Refresh cadence** — `winnipegfire.live` refreshes every 30s against our 5 minutes. Is a tighter cadence viable within the Open Data API's rate limits? Freshness is a real differentiator for this query set.
+4. **Refresh cadence** — our 5 minutes is *identical to `winnipeg.ca`* and `winnipegfire.live` runs at 30s, making us the slowest of the three on live incidents. Is a tighter cadence viable within the Open Data API's rate limits, or do we concede the live query and commit to the archive? (F33)
+5. **Retention ceiling for the archive** — how far back do daily pages go? This is the same question as 4.2, but the answer now has an SEO consequence rather than only a storage one.
