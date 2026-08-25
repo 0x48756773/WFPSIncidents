@@ -10,16 +10,30 @@
 
     const incidents = (window.WFPS_DATA && window.WFPS_DATA.incidents) || [];
 
-    const map = L.map('map').setView([49.8951, -97.1384], 11);
-    const lightTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Everything below used to assume Leaflet had loaded. It is one script from one host,
+    // and this file is a single IIFE: if L was missing, line one threw and took the whole
+    // page's behaviour with it — filters, dark mode, table interaction, the contact link.
+    // The map is now optional. When it is unavailable the table still works.
+    const leafletReady = typeof L !== 'undefined' && typeof L.map === 'function';
+
+    const map = leafletReady ? L.map('map').setView([49.8951, -97.1384], 11) : null;
+    const lightTile = leafletReady ? L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    });
-    const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    }) : null;
+    const darkTile = leafletReady ? L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    });
-    lightTile.addTo(map);
+    }) : null;
+    if (map) {
+        lightTile.addTo(map);
+    } else {
+        const panel = document.getElementById('map');
+        if (panel) {
+            panel.classList.add('map-panel-unavailable');
+            panel.textContent = 'The map could not be loaded. The incident table below is still up to date.';
+        }
+    }
 
     const neighbourhoodCentres = {
         'Agassiz': [49.8168, -97.1428],
@@ -632,6 +646,7 @@
     // --- Neighbourhood outline ---
     function showNeighbourhoodOutline(neighbourhoodName) {
         clearNeighbourhoodOutline();
+        if (!map) return;
         const feature = findNeighbourhoodFeature(neighbourhoodName);
         if (!feature) return;
         activeNeighbourhoodLayer = L.geoJSON(feature, {
@@ -656,7 +671,41 @@
         document.querySelectorAll('tr.incident-row-selected').forEach(r => r.classList.remove('incident-row-selected'));
     }
 
+    // Selecting a row highlights it whether or not a marker exists, so the table stays
+    // usable when the map is unavailable or an incident could not be located.
+    function wireTableRows() {
+        document.querySelectorAll('tr[data-incident]').forEach(row => {
+            row.addEventListener('click', () => {
+                clearHighlightedRow();
+                row.classList.add('incident-row-selected');
+
+                const marker = markersByIncident.get(row.dataset.incident);
+                if (!marker || !map) return;
+
+                map.setView(marker.getLatLng(), Math.max(map.getZoom(), 14));
+                marker.openPopup();
+                const baseRadius = marker.options.radius;
+                marker.setStyle({ radius: 14, weight: 3 });
+                setTimeout(() => marker.setStyle({ radius: baseRadius, weight: 1 }), 1500);
+
+                if (optNeighbourhoodOutline.checked) {
+                    const incident = incidents.find(i => String(i.INCIDENT_NUMBER) === row.dataset.incident);
+                    if (incident) showNeighbourhoodOutline(incident.NEIGHBOURHOOD);
+                } else {
+                    clearNeighbourhoodOutline();
+                }
+            });
+        });
+    }
+
     async function plotIncidents() {
+        if (!map) {
+            // No markers to place, but the table is server-rendered and still interactive.
+            document.getElementById('map-loading').style.display = 'none';
+            wireTableRows();
+            applyFilters();
+            return;
+        }
         document.getElementById('map-loading').style.display = 'flex';
 
         // Boundaries must be indexed before placing markers so each one can be
@@ -715,25 +764,7 @@
             bounds.push(coordinates);
         }
 
-        document.querySelectorAll('tr[data-incident]').forEach(row => {
-            row.addEventListener('click', () => {
-                const marker = markersByIncident.get(row.dataset.incident);
-                if (!marker) return;
-                map.setView(marker.getLatLng(), Math.max(map.getZoom(), 14));
-                marker.openPopup();
-                const baseRadius = marker.options.radius;
-                marker.setStyle({ radius: 14, weight: 3 });
-                setTimeout(() => marker.setStyle({ radius: baseRadius, weight: 1 }), 1500);
-                clearHighlightedRow();
-                row.classList.add('incident-row-selected');
-                if (optNeighbourhoodOutline.checked) {
-                    const incident = incidents.find(i => String(i.INCIDENT_NUMBER) === row.dataset.incident);
-                    if (incident) showNeighbourhoodOutline(incident.NEIGHBOURHOOD);
-                } else {
-                    clearNeighbourhoodOutline();
-                }
-            });
-        });
+        wireTableRows();
 
         if (bounds.length > 0) {
             map.fitBounds(bounds, { padding: [30, 30] });
@@ -766,26 +797,28 @@
     const incidentPanel = document.querySelector('.incident-table-panel');
     if (incidentPanel) {
         incidentPanel.addEventListener('toggle', () => {
-            window.requestAnimationFrame(() => map.invalidateSize());
+            if (map) window.requestAnimationFrame(() => map.invalidateSize());
         });
     }
 
-    window.addEventListener('resize', () => map.invalidateSize());
+    window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
 
     plotIncidents();
 
     // --- Map click: clear neighbourhood outline ---
-    map.on('click', clearNeighbourhoodOutline);
+    if (map) map.on('click', clearNeighbourhoodOutline);
 
     // --- Dark mode ---
     function setDarkMode(enabled) {
         document.documentElement.classList.toggle('dark-mode', enabled);
-        if (enabled) {
-            if (map.hasLayer(lightTile)) lightTile.remove();
-            if (!map.hasLayer(darkTile)) darkTile.addTo(map);
-        } else {
-            if (map.hasLayer(darkTile)) darkTile.remove();
-            if (!map.hasLayer(lightTile)) lightTile.addTo(map);
+        if (map) {
+            if (enabled) {
+                if (map.hasLayer(lightTile)) lightTile.remove();
+                if (!map.hasLayer(darkTile)) darkTile.addTo(map);
+            } else {
+                if (map.hasLayer(darkTile)) darkTile.remove();
+                if (!map.hasLayer(lightTile)) lightTile.addTo(map);
+            }
         }
         localStorage.setItem('wfps_darkMode', enabled ? '1' : '0');
     }

@@ -23,6 +23,18 @@ body {
     text-align: center;
 }
 
+.map-panel-unavailable {
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    color: #6c757d;
+    display: flex;
+    font-size: 0.9rem;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+}
+
 .page-updated {
     color: #6c757d;
     font-size: 0.8rem;
@@ -367,6 +379,12 @@ html.dark-mode .site-footer {
 
 html.dark-mode .site-footer a {
     color: #6c757d;
+}
+
+html.dark-mode .map-panel-unavailable {
+    background-color: #2c2f33;
+    border-color: #3d4045;
+    color: #adb5bd;
 }
 
 html.dark-mode .page-updated {
