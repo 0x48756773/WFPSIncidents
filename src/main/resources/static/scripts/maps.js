@@ -21,7 +21,16 @@
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }) : null;
-    const darkTile = leafletReady ? L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // CARTO's basemaps are no longer keyless: the raster tiles this uses now reject an
+    // unkeyed request, and the vector ones are to follow. The key is configuration rather
+    // than a literal here because this file is served with a 30-day cache -- baked in, a
+    // rotated key would keep failing for returning visitors until their copy expired.
+    // Blank key: the URL stays unkeyed, which is what the tiles used to accept.
+    const tilesKey = (window.WFPS_DATA && window.WFPS_DATA.mapTilesKey) || '';
+    const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        + (tilesKey ? '?key=' + encodeURIComponent(tilesKey) : '');
+    // Attribution is the free tier's condition, so it stays on the layer, not in a footnote.
+    const darkTile = leafletReady ? L.tileLayer(darkTileUrl, {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }) : null;

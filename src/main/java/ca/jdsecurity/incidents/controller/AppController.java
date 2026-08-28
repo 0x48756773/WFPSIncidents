@@ -2,6 +2,7 @@ package ca.jdsecurity.incidents.controller;
 
 import ca.jdsecurity.incidents.configuration.RefreshCadence;
 import ca.jdsecurity.incidents.database.Database;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,10 +30,13 @@ public class AppController {
 
     private final Database database;
     private final RefreshCadence refreshCadence;
+    private final String mapTilesKey;
 
-    public AppController(Database database, RefreshCadence refreshCadence) {
+    public AppController(Database database, RefreshCadence refreshCadence,
+                         @Value("${app.mapTilesKey:}") String mapTilesKey) {
         this.database = database;
         this.refreshCadence = refreshCadence;
+        this.mapTilesKey = mapTilesKey;
     }
 
     @GetMapping(value = "/")
@@ -79,6 +83,10 @@ public class AppController {
         model.addAttribute("pageDescription",
                 PAGE_DESCRIPTION_TEMPLATE.formatted(refreshCadence.getLabel()));
         model.addAttribute("dataSourceAvailable", available);
+        // CARTO now requires a key on its basemaps, and only this page draws a map. Handed
+        // to the browser from configuration so the cached maps.js does not have to be
+        // re-fetched -- or wait out its 30-day cache -- when the key is rotated.
+        model.addAttribute("mapTilesKey", mapTilesKey);
         return "index";
     }
 }
