@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```bash
+cp .env.example .env            # First run only; fill in keys (see Secrets)
 ./mvnw spring-boot:run          # Run locally
 ./mvnw clean package            # Build JAR
 ./mvnw clean package -DskipTests
@@ -12,13 +13,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./mvnw test -Dtest=ClassName    # Run a specific test class
 ```
 
-The app runs on `http://localhost:8080` by default.
+The app runs on `http://localhost:8080` by default. It starts without a `.env`; see **Secrets** for what degrades.
 
 ## Architecture
 
 Spring Boot web app that fetches real-time [Winnipeg Fire Paramedic Service](https://data.winnipeg.ca/resource/yg42-q284.json) incidents and displays them on an interactive Leaflet.js map.
 
-**Request flow:** All components share a single Spring-managed `Database` bean. On startup (`@PostConstruct`) and every 5 minutes (`ScheduledTasks`), `Database` calls `CityOfWinnipegService` (Unirest HTTP client, API token from `application.properties`) → syncs results into the Apache Derby embedded database → `AppController` queries the DB and passes incidents to the Thymeleaf `index.html` template.
+**Request flow:** All components share a single Spring-managed `Database` bean. On startup (`@PostConstruct`) and every 5 minutes (`ScheduledTasks`), `Database` calls `CityOfWinnipegService` (Unirest HTTP client, API token from the environment — see **Secrets**) → syncs results into the Apache Derby embedded database → `AppController` queries the DB and passes incidents to the Thymeleaf `index.html` template.
 
 **Key classes** (all wired via Spring constructor injection — no manual `new`):
 - `AppController` — single `GET /` route; injects `Database`
@@ -43,4 +44,8 @@ Spring Boot web app that fetches real-time [Winnipeg Fire Paramedic Service](htt
 
 **Database:** Configured via `spring.datasource.*` in `application.properties` (embedded Derby at `jdbc:derby:incidents;create=true`). Files live in the `incidents/` directory at the project root (not committed). No migrations — the table is created on first run by `Database.createIncidentsTable()`.
 
-**Configuration:** `application.properties` holds the `secret.cityOfWinnipeg` API token. **This file is currently tracked in git and the token is exposed — it needs rotating and untracking.** Site identity: `app.baseUrl` (canonical public origin, no trailing slash — every absolute URL the app emits derives from it, so a domain move is a one-line change) `app.contactEmail` (footer address; independent of `app.baseUrl`, since the mailbox need not follow the site), `app.authorName` (named attribution on `/about`, in the JSON-LD and in the feed — one value, three surfaces), and `app.refreshSeconds` (polling interval; see `RefreshCadence`). `app.mapTilesKey` is the CARTO key for the dark basemap, which no longer serves unkeyed tile requests; it is handed to the browser through `WFPS_DATA` rather than written into `maps.js` because that file is served with a 30-day cache, so a key baked into it would keep failing for returning visitors after a rotation. `endpoint.cityOfWinnipeg.neighbourhoodsPath` is the boundary dataset. `spring.task.scheduling.pool.size=2` because two jobs now share the scheduler — at size 1 a slow boundary fetch would delay the 60-second incident sync behind it. Tunables: `endpoint.cityOfWinnipeg.limit` (max records per fetch), `endpoint.cityOfWinnipeg.closedWindowHours` (how far back to include closed incidents), and `endpoint.cityOfWinnipeg.callWindowHours` (retention window by call time, default 24; bounds both the fetch and the display filter).
+**Secrets:** `application.properties` is tracked, so **nothing secret may be written into it**. Credentials are read from the environment — `secret.cityOfWinnipeg=${WFPS_CITY_API_TOKEN:}`, `app.mapTilesKey=${WFPS_MAP_TILES_KEY:}` — supplied either by a git-ignored `.env` beside the pom (`spring.config.import=optional:file:./.env[.properties]`, template in `.env.example`) or by real environment variables, which take precedence over the file. Both are optional and default to empty: the City feed falls back to unauthenticated, rate-limited access and the dark basemap requests unkeyed tiles, so a checkout with no `.env` still starts. `NoCommittedSecretsTest` fails the build if a credential is written back into the properties file, including one whose key nobody thought to list.
+
+A previous version of this note claimed the City of Winnipeg token was exposed in git. It was not: that value has been the literal placeholder `***` in every commit since 2024, and the app has always called the feed unauthenticated. The CARTO key committed in `54fbf5d` (2026-08-28) **was** real and should be treated as public and rotated.
+
+**Configuration:** Site identity: `app.baseUrl` (canonical public origin, no trailing slash — every absolute URL the app emits derives from it, so a domain move is a one-line change) `app.contactEmail` (footer address; independent of `app.baseUrl`, since the mailbox need not follow the site), `app.authorName` (named attribution on `/about`, in the JSON-LD and in the feed — one value, three surfaces), and `app.refreshSeconds` (polling interval; see `RefreshCadence`). `app.mapTilesKey` is the CARTO key for the dark basemap, which no longer serves unkeyed tile requests; it is handed to the browser through `WFPS_DATA` rather than written into `maps.js` because that file is served with a 30-day cache, so a key baked into it would keep failing for returning visitors after a rotation. `endpoint.cityOfWinnipeg.neighbourhoodsPath` is the boundary dataset. `spring.task.scheduling.pool.size=2` because two jobs now share the scheduler — at size 1 a slow boundary fetch would delay the 60-second incident sync behind it. Tunables: `endpoint.cityOfWinnipeg.limit` (max records per fetch), `endpoint.cityOfWinnipeg.closedWindowHours` (how far back to include closed incidents), and `endpoint.cityOfWinnipeg.callWindowHours` (retention window by call time, default 24; bounds both the fetch and the display filter).
