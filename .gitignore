@@ -36,3 +36,7 @@ build/
 
 # macOS
 .DS_Store
+
+### Claude Code ###
+# Local launch config holds absolute machine paths.
+.claude/

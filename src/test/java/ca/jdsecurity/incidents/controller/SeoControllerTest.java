@@ -40,6 +40,17 @@ class SeoControllerTest {
                         "Sitemap: https://example.test/sitemap.xml")));
     }
 
+    /**
+     * /api/incidents is the page's own polling endpoint. It holds a second copy of what the
+     * rendered page already shows and changes every minute, so crawling it spends crawl
+     * budget to learn nothing.
+     */
+    @Test
+    void robotsKeepsCrawlersOffThePollingEndpoint() throws Exception {
+        mockMvc.perform(get("/robots.txt"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Disallow: /api/")));
+    }
+
     @Test
     void sitemapUsesConfiguredOriginAndReportsLastSync() throws Exception {
         when(database.getLastSuccessfulSync()).thenReturn(
