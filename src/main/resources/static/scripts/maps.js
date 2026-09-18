@@ -8,7 +8,28 @@
 (function () {
     'use strict';
 
-    const incidents = (window.WFPS_DATA && window.WFPS_DATA.incidents) || [];
+    // Replaced wholesale by each refresh rather than reloaded with the page, so this is
+    // the current list, not the one the page was built with.
+    let incidents = (window.WFPS_DATA && window.WFPS_DATA.incidents) || [];
+
+    /**
+     * Analytics. Every interesting interaction on this page — choosing a filter, opening an
+     * incident, installing the app — happened entirely in the browser and was therefore
+     * invisible: the only events being recorded were page views and outbound link clicks, so
+     * there was no way to tell whether any of this was used.
+     *
+     * No-ops when the tag is absent, which is the case locally, under test, and for anyone
+     * running an ad blocker. Nothing here may depend on it having run.
+     */
+    function track(name, params) {
+        if (typeof window.gtag === 'function') {
+            try {
+                window.gtag('event', name, params || {});
+            } catch (error) {
+                /* Analytics must never break the map. */
+            }
+        }
+    }
 
     // Everything below used to assume Leaflet had loaded. It is one script from one host,
     // and this file is a single IIFE: if L was missing, line one threw and took the whole
@@ -599,40 +620,41 @@
     const markersByIncident = new Map();
     const activeCategories = new Set(['fire', 'medical', 'other']);
     let showClosed = localStorage.getItem('wfps_showClosed') !== '0';
+    let selectedIncident = null;
 
     // --- Filters (apply to both markers and table rows) ---
     function isVisible(category, closed) {
         return activeCategories.has(category) && (!closed || showClosed);
     }
 
+    // Driven off the rows rather than the incident array: rows carry their own category and
+    // closed state, so this stays correct after a refresh has rebuilt them, and it does not
+    // need to re-derive a category the server already worked out.
     function applyFilters() {
-        for (const incident of incidents) {
-            const category = getIncidentCategory(incident.INCIDENT_TYPE);
-            const visible = isVisible(category, isClosed(incident));
+        document.querySelectorAll('tr[data-incident]').forEach(row => {
+            const visible = isVisible(row.dataset.category, row.dataset.closed === 'true');
+            row.classList.toggle('incident-hidden', !visible);
 
-            const marker = markersByIncident.get(String(incident.INCIDENT_NUMBER));
-            if (marker) {
+            const marker = markersByIncident.get(row.dataset.incident);
+            if (marker && map) {
                 visible ? marker.addTo(map) : marker.remove();
             }
-
-            const row = document.querySelector(`tr[data-incident="${incident.INCIDENT_NUMBER}"]`);
-            if (row) {
-                row.classList.toggle('incident-hidden', !visible);
-            }
-        }
+        });
     }
 
     document.querySelectorAll('.filter-btn[data-category]').forEach(btn => {
         btn.addEventListener('click', () => {
             const cat = btn.dataset.category;
-            if (activeCategories.has(cat)) {
-                activeCategories.delete(cat);
-                btn.classList.remove('filter-btn-active');
-            } else {
+            const enabled = !activeCategories.has(cat);
+            if (enabled) {
                 activeCategories.add(cat);
-                btn.classList.add('filter-btn-active');
+            } else {
+                activeCategories.delete(cat);
             }
+            btn.classList.toggle('filter-btn-active', enabled);
+            btn.setAttribute('aria-pressed', String(enabled));
             applyFilters();
+            track('filter_toggle', { category: cat, enabled: enabled });
         });
     });
 
@@ -640,11 +662,14 @@
     const closedToggleBtn = document.getElementById('toggle-closed');
     if (closedToggleBtn) {
         closedToggleBtn.classList.toggle('filter-btn-active', showClosed);
+        closedToggleBtn.setAttribute('aria-pressed', String(showClosed));
         closedToggleBtn.addEventListener('click', () => {
             showClosed = !showClosed;
             closedToggleBtn.classList.toggle('filter-btn-active', showClosed);
+            closedToggleBtn.setAttribute('aria-pressed', String(showClosed));
             localStorage.setItem('wfps_showClosed', showClosed ? '1' : '0');
             applyFilters();
+            track('closed_filter_toggle', { enabled: showClosed });
         });
     }
 
@@ -671,67 +696,210 @@
         }
     }
 
-    // --- Plot ---
+    // --- Selection ---
+    const MARKER_RADIUS = 7;
+
+    function rowFor(incidentNumber) {
+        const key = String(incidentNumber);
+        const escaped = (window.CSS && typeof CSS.escape === 'function') ? CSS.escape(key) : key;
+        return document.querySelector(`tr[data-incident="${escaped}"]`);
+    }
+
+    function incidentByNumber(incidentNumber) {
+        const key = String(incidentNumber);
+        return incidents.find(i => String(i.INCIDENT_NUMBER) === key) || null;
+    }
+
     function clearHighlightedRow() {
         document.querySelectorAll('tr.incident-row-selected').forEach(r => r.classList.remove('incident-row-selected'));
     }
 
-    // Selecting a row highlights it whether or not a marker exists, so the table stays
-    // usable when the map is unavailable or an incident could not be located.
-    function wireTableRows() {
-        document.querySelectorAll('tr[data-incident]').forEach(row => {
-            row.addEventListener('click', () => {
-                clearHighlightedRow();
-                row.classList.add('incident-row-selected');
+    // One path for every way an incident can be opened — a row, a marker, or a shared link —
+    // so all three leave the page in the same state. Selecting works whether or not a marker
+    // exists, keeping the table usable when the map is unavailable or a call could not be
+    // located.
+    function selectIncident(incidentNumber, options) {
+        const opts = options || {};
+        const key = String(incidentNumber);
 
-                const marker = markersByIncident.get(row.dataset.incident);
-                if (!marker || !map) return;
+        clearHighlightedRow();
+        selectedIncident = key;
 
-                map.setView(marker.getLatLng(), Math.max(map.getZoom(), 14));
-                marker.openPopup();
-                const baseRadius = marker.options.radius;
-                marker.setStyle({ radius: 14, weight: 3 });
-                setTimeout(() => marker.setStyle({ radius: baseRadius, weight: 1 }), 1500);
+        const row = rowFor(key);
+        if (row) {
+            row.classList.add('incident-row-selected');
+            if (opts.revealRow) {
+                const panel = document.querySelector('.incident-table-panel');
+                if (panel && !panel.open) panel.open = true;
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
 
-                if (optNeighbourhoodOutline.checked) {
-                    const incident = incidents.find(i => String(i.INCIDENT_NUMBER) === row.dataset.incident);
-                    if (incident) showNeighbourhoodOutline(incident.NEIGHBOURHOOD);
-                } else {
-                    clearNeighbourhoodOutline();
-                }
-            });
+        // Makes the selection shareable. replaceState rather than a hash assignment so
+        // clicking through a dozen incidents does not bury the back button.
+        if (opts.updateHash !== false) {
+            const next = '#incident=' + encodeURIComponent(key);
+            if (location.hash !== next) {
+                history.replaceState(null, '', next);
+            }
+        }
+
+        const incident = incidentByNumber(key);
+        if (optNeighbourhoodOutline && optNeighbourhoodOutline.checked && incident) {
+            showNeighbourhoodOutline(incident.NEIGHBOURHOOD);
+        } else {
+            clearNeighbourhoodOutline();
+        }
+
+        const marker = markersByIncident.get(key);
+        if (!marker || !map) {
+            return;
+        }
+
+        if (opts.pan !== false) {
+            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 14));
+        }
+        marker.openPopup();
+        marker.setStyle({ radius: 14, weight: 3 });
+        setTimeout(() => marker.setStyle({ radius: MARKER_RADIUS, weight: 1 }), 1500);
+    }
+
+    function wireRow(row) {
+        row.addEventListener('click', () => {
+            selectIncident(row.dataset.incident);
+            track('incident_open', { source: 'table_row', category: row.dataset.category });
+        });
+        // The rows carry a click handler and so must be reachable without a mouse; they are
+        // given tabindex in the template, which is only half of it without this.
+        row.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar') {
+                return;
+            }
+            event.preventDefault();
+            selectIncident(row.dataset.incident);
+            track('incident_open', { source: 'table_row_keyboard', category: row.dataset.category });
         });
     }
 
-    async function plotIncidents() {
-        if (!map) {
-            // No markers to place, but the table is server-rendered and still interactive.
-            document.getElementById('map-loading').style.display = 'none';
-            wireTableRows();
-            applyFilters();
+    // --- Table rendering ---
+    // These must produce the same markup as the th:each block in index.html: that render is
+    // what a crawler and a reader without JavaScript get, this one is what everyone sees
+    // from the first refresh onward. Changing one without the other makes the table change
+    // shape a minute after it loads.
+    const CATEGORY_LABELS = { fire: 'Fire Rescue', medical: 'Medical Response', other: 'Other' };
+
+    function rowSignature(incident) {
+        return [
+            incident.INCIDENT_TYPE, incident.IS_MOTOR, incident.NEIGHBOURHOOD,
+            incident.CALL_TIME, incident.UNITS, incident.WARD,
+            isClosed(incident), incident.DURATION, incident.CLOSED_TIME
+        ].join(' ');
+    }
+
+    function cellsHtml(incident) {
+        const category = getIncidentCategory(incident.INCIDENT_TYPE);
+        const closed = isClosed(incident);
+        const closedLabel = incident.DURATION ? 'Closed · ' + escapeHtml(incident.DURATION) : 'Closed';
+        const status = closed
+            ? `<span class="badge incident-badge-closed">${closedLabel}</span>`
+            : '<span class="incident-status-active">Active</span>';
+
+        return `<td data-label="Incident Type"><span>${escapeHtml(incident.INCIDENT_TYPE)}</span></td>`
+            + `<td data-label="Category"><span class="badge incident-badge incident-badge-${category}">`
+            + `${CATEGORY_LABELS[category]}</span></td>`
+            + `<td data-label="Status">${status}</td>`
+            + `<td data-label="Motor Vehicle Incident?"><span>${escapeHtml(incident.IS_MOTOR)}</span></td>`
+            + `<td data-label="Neighbourhood"><span>${escapeHtml(incident.NEIGHBOURHOOD)}</span></td>`
+            + `<td data-label="Call Time"><span>${escapeHtml(incident.CALL_TIME)}</span></td>`
+            + `<td data-label="Units Dispatched"><span>${escapeHtml(incident.UNITS)}</span></td>`
+            + `<td data-label="Ward"><span>${escapeHtml(incident.WARD)}</span></td>`
+            + `<td data-label="Incident Number"><span>${escapeHtml(incident.INCIDENT_NUMBER)}</span></td>`;
+    }
+
+    function applyRowState(row, incident) {
+        const category = getIncidentCategory(incident.INCIDENT_TYPE);
+        const closed = isClosed(incident);
+
+        row.className = `incident-row incident-row-${category}${closed ? ' incident-row-closed' : ''}`;
+        row.dataset.incident = String(incident.INCIDENT_NUMBER);
+        row.dataset.closed = String(closed);
+        row.dataset.category = category;
+
+        const signature = rowSignature(incident);
+        if (row.dataset.sig !== signature) {
+            row.innerHTML = cellsHtml(incident);
+            row.dataset.sig = signature;
+        }
+    }
+
+    function buildRow(incident) {
+        const row = document.createElement('tr');
+        row.tabIndex = 0;
+        row.style.cursor = 'pointer';
+        applyRowState(row, incident);
+        wireRow(row);
+        return row;
+    }
+
+    // Existing rows are moved rather than recreated, so their listeners, selection and the
+    // reader's focus survive a refresh. Only genuinely new calls get new elements.
+    function syncTable(list) {
+        const tbody = document.getElementById('incident-rows');
+        if (!tbody) {
             return;
         }
-        document.getElementById('map-loading').style.display = 'flex';
 
-        // Boundaries must be indexed before placing markers so each one can be
-        // constrained to its neighbourhood. Resolves either way — if the fetch
-        // fails, markers fall back to unconstrained offsets.
-        await neighbourhoodGeoJsonReady;
+        const focusedIncident = document.activeElement
+            && document.activeElement.matches
+            && document.activeElement.matches('tr[data-incident]')
+            ? document.activeElement.dataset.incident
+            : null;
 
-        const bounds = [];
+        const existing = new Map();
+        tbody.querySelectorAll('tr[data-incident]').forEach(r => existing.set(r.dataset.incident, r));
 
-        for (const incident of incidents) {
-            const coordinates = await getIncidentCoordinates(incident);
-            if (!coordinates) {
-                continue;
+        let cursor = tbody.firstElementChild;
+        for (const incident of list) {
+            const key = String(incident.INCIDENT_NUMBER);
+            let row = existing.get(key);
+            if (row) {
+                existing.delete(key);
+                applyRowState(row, incident);
+            } else {
+                row = buildRow(incident);
             }
 
-            const closed = isClosed(incident);
-            const markerColor = getCategoryColor(incident.INCIDENT_TYPE);
-            const statusLine = closed
-                ? `Status: Closed${incident.DURATION ? ' (on scene ' + escapeHtml(incident.DURATION) + ')' : ''}<br/>`
-                : 'Status: Active<br/>';
-            const popup = `
+            if (cursor === row) {
+                cursor = cursor.nextElementSibling;
+            } else {
+                tbody.insertBefore(row, cursor);
+            }
+        }
+
+        // Whatever is left was in the feed before and is not now.
+        existing.forEach(row => row.remove());
+
+        if (selectedIncident) {
+            const row = rowFor(selectedIncident);
+            if (row) {
+                row.classList.add('incident-row-selected');
+            }
+        }
+        if (focusedIncident) {
+            const row = rowFor(focusedIncident);
+            if (row) {
+                row.focus({ preventScroll: true });
+            }
+        }
+    }
+
+    // --- Markers ---
+    function buildPopup(incident) {
+        const closed = isClosed(incident);
+        const statusLine = closed
+            ? `Status: Closed${incident.DURATION ? ' (on scene ' + escapeHtml(incident.DURATION) + ')' : ''}<br/>`
+            : 'Status: Active<br/>';
+        return `
                 <strong>${escapeHtml(incident.INCIDENT_TYPE)}</strong><br/>
                 ${statusLine}
                 Neighbourhood: ${escapeHtml(incident.NEIGHBOURHOOD)}<br/>
@@ -739,64 +907,276 @@
                 Call Time: ${escapeHtml(incident.CALL_TIME)}
                 ${closed && incident.CLOSED_TIME ? '<br/>Closed: ' + escapeHtml(incident.CLOSED_TIME) : ''}
             `;
+    }
 
+    async function syncMarkers(list) {
+        if (!map) {
+            return [];
+        }
+
+        // Boundaries must be indexed before placing markers so each one can be constrained
+        // to its neighbourhood. Resolves either way — if the fetch failed, markers fall back
+        // to unconstrained offsets.
+        await neighbourhoodGeoJsonReady;
+
+        const seen = new Set();
+        const bounds = [];
+
+        for (const incident of list) {
+            const key = String(incident.INCIDENT_NUMBER);
+            const closed = isClosed(incident);
+            seen.add(key);
+
+            const existingMarker = markersByIncident.get(key);
+            if (existingMarker) {
+                // Position is a pure function of the incident number, so it never moves.
+                // Only the open/closed styling and the popup can change under us.
+                if (existingMarker.wfpsClosed !== closed) {
+                    existingMarker.setStyle({
+                        fillOpacity: closed ? 0.12 : 0.6,
+                        dashArray: closed ? '3 3' : null
+                    });
+                    existingMarker.setPopupContent(buildPopup(incident));
+                    existingMarker.wfpsClosed = closed;
+                }
+                bounds.push(existingMarker.getLatLng());
+                continue;
+            }
+
+            const coordinates = await getIncidentCoordinates(incident);
+            if (!coordinates) {
+                continue;
+            }
+
+            const markerColor = getCategoryColor(incident.INCIDENT_TYPE);
             const marker = L.circleMarker(coordinates, {
-                radius: 7,
+                radius: MARKER_RADIUS,
                 color: markerColor,
                 fillColor: markerColor,
                 fillOpacity: closed ? 0.12 : 0.6,
-                weight: closed ? 1 : 1,
+                weight: 1,
                 dashArray: closed ? '3 3' : null
-            }).bindPopup(popup);
+            }).bindPopup(buildPopup(incident));
 
+            marker.wfpsClosed = closed;
             marker.on('click', () => {
-                clearHighlightedRow();
-                const row = document.querySelector(`tr[data-incident="${incident.INCIDENT_NUMBER}"]`);
-                if (row) {
-                    row.classList.add('incident-row-selected');
-                    const panel = document.querySelector('.incident-table-panel');
-                    if (panel && !panel.open) panel.open = true;
-                    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-                if (optNeighbourhoodOutline.checked) {
-                    showNeighbourhoodOutline(incident.NEIGHBOURHOOD);
-                } else {
-                    clearNeighbourhoodOutline();
-                }
+                selectIncident(key, { pan: false, revealRow: true });
+                track('incident_open', {
+                    source: 'map_marker',
+                    category: getIncidentCategory(incident.INCIDENT_TYPE)
+                });
             });
 
-            markersByIncident.set(String(incident.INCIDENT_NUMBER), marker);
+            markersByIncident.set(key, marker);
             bounds.push(coordinates);
         }
 
-        wireTableRows();
-
-        if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [30, 30] });
+        for (const [key, marker] of markersByIncident) {
+            if (!seen.has(key)) {
+                marker.remove();
+                markersByIncident.delete(key);
+            }
         }
 
-        applyFilters();
-
-        document.getElementById('map-loading').style.display = 'none';
+        return bounds;
     }
 
-    // --- Auto-refresh countdown ---
+    // --- Map view persistence ---
+    // Where the reader last left the map, so a hard reload, a shared link opened later, or
+    // the app being reopened from the home screen all come back to their part of the city
+    // instead of the whole of Winnipeg. Expires, because a fortnight-old viewport is not
+    // where anyone wants to start.
+    const VIEW_KEY = 'wfps_mapView';
+    const VIEW_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+    function saveMapView() {
+        if (!map) {
+            return;
+        }
+        try {
+            const centre = map.getCenter();
+            localStorage.setItem(VIEW_KEY, JSON.stringify({
+                lat: centre.lat,
+                lng: centre.lng,
+                zoom: map.getZoom(),
+                at: Date.now()
+            }));
+        } catch (error) {
+            /* Private mode, or storage full. Not worth breaking the map over. */
+        }
+    }
+
+    function restoreMapView() {
+        if (!map) {
+            return false;
+        }
+        try {
+            const view = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null');
+            if (!view || typeof view.lat !== 'number' || typeof view.lng !== 'number') {
+                return false;
+            }
+            if (!view.at || Date.now() - view.at > VIEW_MAX_AGE_MS) {
+                return false;
+            }
+            map.setView([view.lat, view.lng], view.zoom || 11);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // --- Deep links ---
+    function incidentFromHash() {
+        const match = /^#incident=(.+)$/.exec(location.hash || '');
+        if (!match) {
+            return null;
+        }
+        try {
+            return decodeURIComponent(match[1]);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // --- Refresh ---
     // Matches the server's polling interval, passed through so the two cannot drift.
     const REFRESH_SECONDS = (window.WFPS_DATA && window.WFPS_DATA.refreshSeconds) || 60;
+    const NEW_HIGHLIGHT_MS = 25000;
+    const BASE_TITLE = document.title;
+
     let countdown = REFRESH_SECONDS;
+    let refreshing = false;
+    let unseenNew = 0;
+
     const refreshBadge = document.getElementById('refresh-badge');
+    const knownIncidents = new Set(incidents.map(i => String(i.INCIDENT_NUMBER)));
 
     function updateRefreshBadge() {
+        if (!refreshBadge) {
+            return;
+        }
         const m = Math.floor(countdown / 60);
         const s = String(countdown % 60).padStart(2, '0');
         refreshBadge.textContent = `Refreshing in ${m}:${s}`;
     }
 
+    // A backgrounded tab is how a lot of people use this page — it is left open and glanced
+    // at. Counting arrivals in the tab title is the only way that glance tells them anything
+    // without being brought to the front. Only ever applied while the tab is hidden, so a
+    // crawler rendering the page never sees a title that is not the real one.
+    function setTitleBadge() {
+        document.title = unseenNew > 0 ? `(${unseenNew}) ${BASE_TITLE}` : BASE_TITLE;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden || unseenNew === 0) {
+            return;
+        }
+        track('returned_to_tab', { new_incidents: unseenNew });
+        unseenNew = 0;
+        setTitleBadge();
+    });
+
+    function markArrived(keys) {
+        for (const key of keys) {
+            const row = rowFor(key);
+            if (row) {
+                row.classList.add('incident-row-new');
+                setTimeout(() => row.classList.remove('incident-row-new'), NEW_HIGHLIGHT_MS);
+            }
+
+            const marker = markersByIncident.get(key);
+            const element = marker && typeof marker.getElement === 'function' ? marker.getElement() : null;
+            if (element) {
+                element.classList.add('marker-new');
+                setTimeout(() => element.classList.remove('marker-new'), NEW_HIGHLIGHT_MS);
+            }
+        }
+    }
+
+    function applyChrome(data) {
+        const answer = document.getElementById('live-summary-answer');
+        if (answer && typeof data.summarySentence === 'string') {
+            answer.textContent = data.summarySentence;
+        }
+
+        const updated = document.getElementById('last-updated');
+        if (updated && data.lastUpdatedIso) {
+            updated.setAttribute('datetime', data.lastUpdatedIso);
+            updated.textContent = data.lastUpdatedDisplay || '';
+        }
+
+        const warning = document.getElementById('source-warning');
+        if (warning) {
+            warning.hidden = data.dataSourceAvailable !== false;
+        }
+    }
+
+    async function applyUpdate(data) {
+        const list = Array.isArray(data.incidents) ? data.incidents : [];
+        incidents = list;
+
+        const arrived = list
+            .map(incident => String(incident.INCIDENT_NUMBER))
+            .filter(key => !knownIncidents.has(key));
+
+        knownIncidents.clear();
+        list.forEach(incident => knownIncidents.add(String(incident.INCIDENT_NUMBER)));
+
+        syncTable(list);
+        await syncMarkers(list);
+        applyFilters();
+        applyChrome(data);
+
+        if (arrived.length === 0) {
+            return;
+        }
+
+        markArrived(arrived);
+        track('new_incidents', { count: arrived.length, hidden: document.hidden });
+        if (document.hidden) {
+            unseenNew += arrived.length;
+            setTitleBadge();
+        }
+    }
+
+    async function refresh() {
+        try {
+            const response = await fetch('/api/incidents', {
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-store'
+            });
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            await applyUpdate(await response.json());
+        } catch (error) {
+            // Keep showing the last good data and try again next cycle. The page used to
+            // reload on this timer, so a failed fetch was a blank page; now it is a page
+            // that has simply not changed.
+            track('refresh_failed', {});
+        }
+    }
+
     updateRefreshBadge();
-    setInterval(() => {
+    setInterval(async () => {
+        if (refreshing) {
+            return;
+        }
         countdown--;
         updateRefreshBadge();
-        if (countdown <= 0) location.reload();
+        if (countdown > 0) {
+            return;
+        }
+
+        refreshing = true;
+        if (refreshBadge) {
+            refreshBadge.textContent = 'Refreshing…';
+        }
+        await refresh();
+        countdown = REFRESH_SECONDS;
+        refreshing = false;
+        updateRefreshBadge();
     }, 1000);
 
     // --- Map resize ---
@@ -804,12 +1184,73 @@
     if (incidentPanel) {
         incidentPanel.addEventListener('toggle', () => {
             if (map) window.requestAnimationFrame(() => map.invalidateSize());
+            track('table_panel_toggle', { open: incidentPanel.open });
         });
     }
 
     window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
 
-    plotIncidents();
+    // --- First render ---
+    let interacted = false;
+    function noteInteraction(kind) {
+        if (interacted) {
+            return;
+        }
+        interacted = true;
+        track('map_interaction', { type: kind });
+    }
+
+    async function initialise() {
+        const loading = document.getElementById('map-loading');
+        if (loading) {
+            loading.style.display = map ? 'flex' : 'none';
+        }
+
+        const bounds = await syncMarkers(incidents);
+
+        // The server rendered these rows; they need their handlers, and a signature so the
+        // first refresh can tell an unchanged row from a changed one.
+        document.querySelectorAll('tr[data-incident]').forEach(row => {
+            const incident = incidentByNumber(row.dataset.incident);
+            if (incident) {
+                row.dataset.sig = rowSignature(incident);
+            }
+            wireRow(row);
+        });
+
+        applyFilters();
+
+        const deepLinked = incidentFromHash();
+        const restored = restoreMapView();
+        if (map && !restored && !deepLinked && bounds.length > 0) {
+            // Measure the container first: framing against a panel that has not been laid
+            // out yet produces a degenerate fit, which on a first load meant opening at
+            // maximum zoom on one arbitrary street.
+            map.invalidateSize();
+            // Unanimated so moveend fires inside this call, before the handlers below are
+            // attached. Automatic framing must not be recorded as the reader's own view.
+            map.fitBounds(bounds, { padding: [30, 30], animate: false });
+        }
+        if (deepLinked) {
+            selectIncident(deepLinked, { revealRow: true, updateHash: false });
+            track('incident_open', { source: 'deep_link' });
+        }
+
+        // Attached after the opening view is settled, so automatic framing is never
+        // mistaken for the reader choosing where to look.
+        if (map) {
+            map.on('moveend', saveMapView);
+            map.on('zoomend', saveMapView);
+            map.on('dragend', () => noteInteraction('pan'));
+            map.on('zoomend', () => noteInteraction('zoom'));
+        }
+
+        if (loading) {
+            loading.style.display = 'none';
+        }
+    }
+
+    initialise();
 
     // --- Map click: clear neighbourhood outline ---
     if (map) map.on('click', clearNeighbourhoodOutline);
@@ -829,10 +1270,16 @@
         localStorage.setItem('wfps_darkMode', enabled ? '1' : '0');
     }
 
-    optDarkMode.addEventListener('change', () => setDarkMode(optDarkMode.checked));
+    // Tracked from the change handlers rather than inside setDarkMode, so restoring a saved
+    // preference on load is not counted as someone choosing it again.
+    optDarkMode.addEventListener('change', () => {
+        setDarkMode(optDarkMode.checked);
+        track('dark_mode_toggle', { enabled: optDarkMode.checked });
+    });
     optNeighbourhoodOutline.addEventListener('change', () => {
         localStorage.setItem('wfps_neighbourhoodOutline', optNeighbourhoodOutline.checked ? '1' : '0');
         if (!optNeighbourhoodOutline.checked) clearNeighbourhoodOutline();
+        track('outline_toggle', { enabled: optNeighbourhoodOutline.checked });
     });
 
     // Restore settings from localStorage
@@ -850,11 +1297,126 @@
     settingsBtn.addEventListener('click', e => {
         e.stopPropagation();
         settingsPanel.hidden = !settingsPanel.hidden;
+        if (!settingsPanel.hidden) {
+            track('settings_open', {});
+        }
     });
     document.addEventListener('click', e => {
         if (!settingsPanel.hidden && !settingsPanel.contains(e.target) && e.target !== settingsBtn) {
             settingsPanel.hidden = true;
         }
     });
+
+    // --- Install prompt ---
+    // The weakest number this site has is people coming back: almost everyone arrives once
+    // and never returns. For something whose whole use is checking on it, a home screen
+    // icon is the difference between remembering it exists and not.
+    const INSTALL_DISMISSED_KEY = 'wfps_installDismissed';
+    const INSTALL_SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
+
+    const installBar = document.getElementById('install-bar');
+    const installText = document.getElementById('install-bar-text');
+    const installAccept = document.getElementById('install-accept');
+    const installDismiss = document.getElementById('install-dismiss');
+
+    let deferredInstallPrompt = null;
+
+    function standalone() {
+        return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+            || window.navigator.standalone === true;
+    }
+
+    function installRecentlyDismissed() {
+        try {
+            const at = Number(localStorage.getItem(INSTALL_DISMISSED_KEY) || 0);
+            return at > 0 && Date.now() - at < INSTALL_SNOOZE_MS;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function dismissInstallBar(reason) {
+        if (installBar) {
+            installBar.hidden = true;
+        }
+        try {
+            localStorage.setItem(INSTALL_DISMISSED_KEY, String(Date.now()));
+        } catch (error) {
+            /* Nothing to do; it will simply be offered again. */
+        }
+        track('install_dismissed', { reason: reason });
+    }
+
+    function showInstallBar(mode) {
+        if (!installBar || standalone() || installRecentlyDismissed()) {
+            return;
+        }
+        // iOS has no install prompt to defer, so the only thing on offer there is the
+        // instruction. Hiding the button avoids a control that could not do anything.
+        if (mode === 'ios') {
+            if (installText) {
+                installText.textContent = 'Add this map to your home screen: tap Share, then Add to Home Screen.';
+            }
+            if (installAccept) {
+                installAccept.hidden = true;
+            }
+        }
+        installBar.hidden = false;
+        track('install_prompt_shown', { mode: mode });
+    }
+
+    window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        showInstallBar('browser');
+    });
+
+    if (installAccept) {
+        installAccept.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) {
+                return;
+            }
+            track('install_accepted', {});
+            deferredInstallPrompt.prompt();
+            const choice = await deferredInstallPrompt.userChoice.catch(() => null);
+            deferredInstallPrompt = null;
+            installBar.hidden = true;
+            track('install_choice', { outcome: choice ? choice.outcome : 'unknown' });
+        });
+    }
+
+    if (installDismiss) {
+        installDismiss.addEventListener('click', () => dismissInstallBar('user'));
+    }
+
+    window.addEventListener('appinstalled', () => {
+        if (installBar) {
+            installBar.hidden = true;
+        }
+        track('app_installed', {});
+    });
+
+    // iOS never fires beforeinstallprompt, so the offer has to be made on inspection.
+    const iosSafari = /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+        && !/crios|fxios|edgios/i.test(window.navigator.userAgent);
+    if (iosSafari && !standalone()) {
+        showInstallBar('ios');
+    }
+
+    // Distinguishes a launch from the home screen from a visit in a browser tab, which is
+    // the only way to tell whether any of the above is worth keeping.
+    if (standalone()) {
+        track('app_launch_standalone', {});
+    }
+
+    // --- Service worker ---
+    // Registered for installability and an honest offline page, not for caching; see sw.js.
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(() => {
+                /* No service worker means no install prompt, and nothing else changes. */
+            });
+        });
+    }
 
 })();

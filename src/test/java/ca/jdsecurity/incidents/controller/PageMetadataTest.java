@@ -90,4 +90,24 @@ class PageMetadataTest {
     void titleKeepsTheAcronymTheSiteRanksFor() {
         assertThat(titles().get(0)).contains("WFPS");
     }
+
+    /**
+     * Search treats the acronym and the expanded name as different queries, and the site was
+     * doing well on only one of them — around position 2 for "wfps" phrasings while sitting
+     * on page two for the service's actual name, drawing impressions and almost no clicks.
+     * Both have to be present verbatim, not one standing in for the other.
+     */
+    @Test
+    void titleSpellsOutTheServiceNameInFull() {
+        assertThat(titles().get(0)).contains("Winnipeg Fire Paramedic Service");
+    }
+
+    /**
+     * The description leads with the phrasing visitors actually type, because search bolds
+     * the words a query matched and that is what earns the click from a listing.
+     */
+    @Test
+    void descriptionLeadsWithTheQuestionVisitorsAsk() {
+        assertThat(descriptions().get(0)).startsWith("Where is the fire in Winnipeg right now?");
+    }
 }

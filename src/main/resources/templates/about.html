@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>About the data – WFPS Active Incident Map</title>
 
+    <!-- Analytics, shared with the map page. This page had no tag at all and so reported no
+         visitors, despite drawing search impressions of its own. -->
+    <th:block th:replace="~{fragments/analytics :: tag}"></th:block>
+
     <meta name="description" content="Where the Winnipeg Fire Paramedic Service incident data on this map comes from, what it covers, how markers are placed, and what the data cannot tell you.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" th:href="${baseUrl} + '/about'">
@@ -13,6 +17,14 @@
     <meta property="og:url" th:content="${baseUrl} + '/about'">
     <meta property="og:title" content="About the data – WFPS Active Incident Map">
     <meta property="og:description" content="Where the incident data comes from, what it covers, and what it cannot tell you.">
+    <meta property="og:image" th:content="${baseUrl} + '/og-preview.png'">
+    <meta property="og:image:alt" content="Map of Winnipeg with colour-coded markers showing active fire rescue, medical response and other Winnipeg Fire Paramedic Service incidents.">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" th:content="${baseUrl} + '/about'">
+    <meta name="twitter:title" content="About the data – WFPS Active Incident Map">
+    <meta name="twitter:description" content="Where the incident data comes from, what it covers, and what it cannot tell you.">
+    <meta name="twitter:image" th:content="${baseUrl} + '/og-preview.png'">
 
     <!-- Feed autodiscovery: how a reader finds the feed without being told the URL. -->
     <link rel="alternate" type="application/atom+xml" title="WFPS recent incidents" th:href="${baseUrl} + '/feed.xml'">
@@ -21,6 +33,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="manifest" href="/site.webmanifest">
 
     <link rel="stylesheet" th:href="@{/vendor/fonts/montserrat.css}">
     <link rel="stylesheet" th:href="@{/vendor/bootstrap/bootstrap.min.css}">
@@ -62,6 +75,47 @@
             and &mdash; once the call ends &mdash; the time it closed. Nothing else is published, and
             nothing here is added to it.
         </p>
+
+        <h2 id="pulsepoint">Is this PulsePoint?</h2>
+        <p>
+            <strong>No.</strong>
+            <a href="https://www.pulsepoint.org/" target="_blank" rel="noopener">PulsePoint</a> is a
+            separate service operated by the PulsePoint Foundation, a US non-profit. It is not
+            affiliated with this site, and this site is not affiliated with it. Many people arrive
+            here searching for PulsePoint in Winnipeg, so it is worth being clear about the
+            difference.
+        </p>
+        <p>
+            PulsePoint works by an agency connecting its own computer-aided dispatch system to the
+            PulsePoint platform, which then drives the PulsePoint Respond app &mdash; including its
+            CPR-needed alerts. Whether a given agency appears there is that agency&rsquo;s decision,
+            and nothing on this site can change or reflect it. This map takes the opposite route: it
+            reads the incident feed the City of Winnipeg already publishes as open data, and plots
+            it. No integration, no agency involvement, and no connection to PulsePoint&rsquo;s data.
+        </p>
+        <p>
+            The practical differences: this site sends no alerts and does not know where you are;
+            it only shows what the City has published, so it will never be faster than that feed;
+            and it covers Winnipeg Fire Paramedic Service calls and nothing else.
+        </p>
+
+        <h2 id="keeping-an-eye">Keeping an eye on it</h2>
+        <p>
+            There is no account to make and nothing to sign up for. If you want to check back
+            regularly, there are two ways that do not involve remembering the address:
+        </p>
+        <ul>
+            <li>
+                <strong>Add it to your home screen.</strong> The map page will offer this on
+                browsers that support it; on iPhone, use <em>Share &rarr; Add to Home Screen</em>.
+                It then opens like an app, straight to the live map.
+            </li>
+            <li>
+                <strong>Subscribe to the <a href="/feed.xml">Atom feed</a></strong> in any feed
+                reader. Because an incident changes after it is published &mdash; it closes &mdash;
+                the feed reports when each entry was first published and when it was last updated.
+            </li>
+        </ul>
 
         <h2>What &ldquo;active&rdquo; means</h2>
         <p>

@@ -2,6 +2,7 @@ package ca.jdsecurity.incidents.controller;
 
 import ca.jdsecurity.incidents.configuration.RefreshCadence;
 import ca.jdsecurity.incidents.database.Database;
+import ca.jdsecurity.incidents.model.IncidentSummary;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,16 +17,22 @@ import java.util.Map;
 @Controller
 public class AppController {
 
-    private static final DateTimeFormatter DISPLAY = DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' HH:mm z");
+    /** Shared with {@link IncidentApiController}, so the page and the poll format one time one way. */
+    static final DateTimeFormatter DISPLAY = DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' HH:mm z");
 
-    // Leads with the phrase the page competes for, while keeping WFPS — the acronym the site
-    // already ranks for. The full service name is carried by the description, the subtitle and
-    // the structured data, so dropping it here does not remove it from the page.
+    // Carries the service's full name *and* its acronym, because search treats them as
+    // different queries and the site was doing well on only one of them: it ranked around
+    // position 2 for "wfps ..." phrasings while sitting on page two for "winnipeg fire
+    // paramedic service", which drew impressions and almost no clicks. Both now appear
+    // verbatim, inside the ~60 characters Google will actually display.
     private static final String PAGE_TITLE =
-            "Winnipeg Fire Incidents – Live WFPS Active Incident Map";
+            "Winnipeg Fire Paramedic Service (WFPS) Live Incident Map";
+    // Opens with the question the largest group of visitors actually typed. Search bolds the
+    // words a query matched, so leading with the phrasing people use is worth more here than
+    // leading with a description of the software.
     private static final String PAGE_DESCRIPTION_TEMPLATE =
-            "Live map of Winnipeg fire incidents, medical responses and rescue calls, updated every "
-                    + "%s from Winnipeg Fire Paramedic Service dispatch data.";
+            "Where is the fire in Winnipeg right now? Live WFPS map of active fire, medical and "
+                    + "rescue calls, updated every %s from City of Winnipeg open data.";
 
     private final Database database;
     private final RefreshCadence refreshCadence;
@@ -66,6 +73,10 @@ public class AppController {
 
         model.addAttribute("incidents", incidentList);
         model.addAttribute("neighbourhoodList", neighbourhoodList);
+        // The answer to "is there a fire in Winnipeg right now", rendered into the HTML
+        // rather than painted in by the map script, so it is readable without JavaScript
+        // and present for a crawler that does not wait for one.
+        model.addAttribute("summary", IncidentSummary.of(incidentList));
         // Freshness the crawler can read. The countdown badge in the table legend is
         // client-rendered and points at the *next* refresh; this is the last completed one.
         // Left null before the first successful sync so the page cannot claim a stale time.
