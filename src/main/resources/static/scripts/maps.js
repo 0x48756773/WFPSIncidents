@@ -797,10 +797,14 @@
     // shape a minute after it loads.
     const CATEGORY_LABELS = { fire: 'Fire Rescue', medical: 'Medical Response', other: 'Other' };
 
-    // Serialised rather than joined on a delimiter: no separator can collide with a
-    // field value, and nothing exotic ends up in the source. This previously joined on
-    // a literal NUL, which made git treat the whole file as binary and undiffable.
-    function rowSignature(incident) {
+    // Every mutable field of an incident, used by both the row and the marker. One
+    // signature rather than one each, because the failure mode of two is that a field is
+    // remembered in one and forgotten in the other, and the thing that goes stale is
+    // whichever was forgotten.
+    //
+    // Serialised rather than joined on a delimiter: no separator can collide with a field
+    // value, and nothing exotic ends up in the source.
+    function incidentSignature(incident) {
         return JSON.stringify([
             incident.INCIDENT_TYPE, incident.IS_MOTOR, incident.NEIGHBOURHOOD,
             incident.CALL_TIME, incident.UNITS, incident.WARD,
@@ -837,7 +841,7 @@
         row.dataset.closed = String(closed);
         row.dataset.category = category;
 
-        const signature = rowSignature(incident);
+        const signature = incidentSignature(incident);
         if (row.dataset.sig !== signature) {
             row.innerHTML = cellsHtml(incident);
             row.dataset.sig = signature;
@@ -941,15 +945,40 @@
 
             const existingMarker = markersByIncident.get(key);
             if (existingMarker) {
-                // Position is a pure function of the incident number, so it never moves.
-                // Only the open/closed styling and the popup can change under us.
-                if (existingMarker.wfpsClosed !== closed) {
+                // Compared on every field the marker draws from, not just the closed flag.
+                // The feed revises records in place: units are added to a running call, a
+                // type is corrected, and a call first published as Unverified resolves to a
+                // real neighbourhood later. Watching only the closed state left the popup,
+                // the category colour and the position stale for the rest of the call —
+                // which the old full-page reload happened to hide.
+                const signature = incidentSignature(incident);
+                if (existingMarker.wfpsSignature !== signature) {
+                    const markerColor = getCategoryColor(incident.INCIDENT_TYPE);
                     existingMarker.setStyle({
+                        color: markerColor,
+                        fillColor: markerColor,
                         fillOpacity: closed ? 0.12 : 0.6,
                         dashArray: closed ? '3 3' : null
                     });
                     existingMarker.setPopupContent(buildPopup(incident));
-                    existingMarker.wfpsClosed = closed;
+
+                    // A marker's position comes from its neighbourhood, so a revised
+                    // neighbourhood has to move it.
+                    if (existingMarker.wfpsNeighbourhood !== incident.NEIGHBOURHOOD) {
+                        const moved = await getIncidentCoordinates(incident);
+                        if (!moved) {
+                            // Revised to something that is not a place — Outside Winnipeg,
+                            // or back to Unverified. Leaving the marker where it was would
+                            // keep asserting a location the data no longer claims.
+                            existingMarker.remove();
+                            markersByIncident.delete(key);
+                            continue;
+                        }
+                        existingMarker.setLatLng(moved);
+                        existingMarker.wfpsNeighbourhood = incident.NEIGHBOURHOOD;
+                    }
+
+                    existingMarker.wfpsSignature = signature;
                 }
                 bounds.push(existingMarker.getLatLng());
                 continue;
@@ -970,12 +999,16 @@
                 dashArray: closed ? '3 3' : null
             }).bindPopup(buildPopup(incident));
 
-            marker.wfpsClosed = closed;
+            marker.wfpsSignature = incidentSignature(incident);
+            marker.wfpsNeighbourhood = incident.NEIGHBOURHOOD;
             marker.on('click', () => {
                 selectIncident(key, { pan: false, revealRow: true });
+                // Looked up rather than closed over: this marker outlives the refresh that
+                // created it, and the type it was created with can be corrected later.
+                const current = incidentByNumber(key) || incident;
                 track('incident_open', {
                     source: 'map_marker',
-                    category: getIncidentCategory(incident.INCIDENT_TYPE)
+                    category: getIncidentCategory(current.INCIDENT_TYPE)
                 });
             });
 
@@ -1225,7 +1258,7 @@
         document.querySelectorAll('tr[data-incident]').forEach(row => {
             const incident = incidentByNumber(row.dataset.incident);
             if (incident) {
-                row.dataset.sig = rowSignature(incident);
+                row.dataset.sig = incidentSignature(incident);
             }
             wireRow(row);
         });
