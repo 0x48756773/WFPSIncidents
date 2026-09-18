@@ -788,12 +788,15 @@
     // shape a minute after it loads.
     const CATEGORY_LABELS = { fire: 'Fire Rescue', medical: 'Medical Response', other: 'Other' };
 
+    // Serialised rather than joined on a delimiter: no separator can collide with a
+    // field value, and nothing exotic ends up in the source. This previously joined on
+    // a literal NUL, which made git treat the whole file as binary and undiffable.
     function rowSignature(incident) {
-        return [
+        return JSON.stringify([
             incident.INCIDENT_TYPE, incident.IS_MOTOR, incident.NEIGHBOURHOOD,
             incident.CALL_TIME, incident.UNITS, incident.WARD,
             isClosed(incident), incident.DURATION, incident.CLOSED_TIME
-        ].join(' ');
+        ]);
     }
 
     function cellsHtml(incident) {
