@@ -1,0 +1,23 @@
+# Line endings are decided here, not by each contributor's core.autocrlf setting.
+#
+# Everything in this repository is stored with LF, and with this file it is checked
+# out as LF too. Without it, a clone on Windows gets CRLF in the working tree, and an
+# editor that writes a file back that way turns a small change into a whole-file diff:
+# every line differs, so the change cannot be reviewed line by line. It is a review
+# problem rather than a build problem, and it is invisible until someone reads a
+# diffstat and notices the numbers are far too large.
+#
+# mvnw is a POSIX shell script and must keep LF, which the rule below already gives it.
+* text=auto eol=lf
+
+# Batch files are the exception: the Windows command interpreter wants CRLF, and has
+# been known to mis-handle multi-line constructs without it.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Declared explicitly so that a stray byte can never get one of these treated as text
+# and mangled by end-of-line conversion.
+*.ico   binary
+*.jar   binary
+*.png   binary
+*.woff2 binary
