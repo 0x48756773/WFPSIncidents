@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Pushing again to the same branch supersedes the previous run: there is no value in
+# finishing a build for a commit that has already been replaced.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The workflow only reads the repository. Nothing here publishes, comments or deploys.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # The project targets Java 17 (see <java.version> in pom.xml) but is developed on 21,
+      # which is what this reproduces. Building on the version actually in use is the point;
+      # if 17 compatibility is something the project wants to guarantee, that wants its own
+      # matrix entry rather than being assumed here.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # verify runs the tests and then packages the jar, so a change that passes its tests
+      # but cannot be assembled still fails here.
+      #
+      # No secrets are needed. IncidentsApplicationTests starts the full context, which
+      # triggers one live call to the City of Winnipeg API; the sync catches its own
+      # failures and logs them, so an unreachable or unauthenticated upstream degrades
+      # rather than failing the build.
+      - name: Build and test
+        run: ./mvnw -B -ntp verify
+
+      # Surefire writes the actual assertion messages to files. Without these a failed run
+      # only shows the summary line, which says what failed but not why.
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7
