@@ -36,3 +36,7 @@ build/
 
 # macOS
 .DS_Store
+
+### Local secrets ###
+# Real values live here; .env.example is the tracked template.
+.env
