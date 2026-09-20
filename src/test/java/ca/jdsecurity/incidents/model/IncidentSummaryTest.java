@@ -77,7 +77,7 @@ class IncidentSummaryTest {
         String sentence = IncidentSummary.of(List.of(incident("Fire Rescue - Structure", false))).sentence();
 
         assertThat(sentence).isEqualTo(
-                "1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue.");
+                "1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue call.");
     }
 
     @Test
@@ -89,7 +89,7 @@ class IncidentSummaryTest {
                 incident("Alarm Bells Ringing", false))).sentence();
 
         assertThat(sentence).isEqualTo("4 Winnipeg Fire Paramedic Service calls are active right now"
-                + " — 1 fire rescue, 2 medical response and 1 other.");
+                + " — 1 fire rescue call, 2 medical responses and 1 other call.");
     }
 
     /** Only the categories that actually have calls are named. */
@@ -100,7 +100,7 @@ class IncidentSummaryTest {
                 incident("Medical Response - Fall", false))).sentence();
 
         assertThat(sentence).doesNotContain("fire rescue").doesNotContain("other");
-        assertThat(sentence).contains("2 medical response");
+        assertThat(sentence).contains("2 medical responses");
     }
 
     @Test
