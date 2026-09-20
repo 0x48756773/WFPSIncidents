@@ -21,11 +21,14 @@ public enum IncidentCategory {
     MEDICAL("medical", "Medical Response"),
     OTHER("other", "Other");
 
-    /**
-     * Whole-word, so "firearm" is not a fire. Hyphens and punctuation are word boundaries,
-     * so "Alarm - No Fire" still groups with fire — it is a fire crew's response either way.
-     */
+    /** Whole-word, so a "Firearm" call is not a fire. */
     private static final Pattern FIRE_WORD = Pattern.compile("\\bfire\\b");
+
+    /**
+     * Types that report the <em>absence</em> of a fire — "Alarm - No Fire", "Non-Fire Rescue".
+     * The word is there, but the call is not a fire, so the negation is checked first and wins.
+     */
+    private static final Pattern NO_FIRE = Pattern.compile("\\b(?:no|non)[\\s-]+fire\\b");
 
     private final String id;
     private final String label;
@@ -48,12 +51,22 @@ public enum IncidentCategory {
     /** Fire is tested first, so a type naming both stays with the fire response. */
     public static IncidentCategory of(String incidentType) {
         String normalized = incidentType == null ? "" : incidentType.toLowerCase(Locale.ROOT);
-        if (FIRE_WORD.matcher(normalized).find()) {
+        if (isFire(normalized)) {
             return FIRE;
         }
         if (normalized.contains("medical response")) {
             return MEDICAL;
         }
         return OTHER;
+    }
+
+    private static boolean isFire(String normalized) {
+        // A type saying there was no fire is not a fire call, whatever else it names: the
+        // crew attended an alarm. Negation is checked over the whole type, so "Fire Alarm -
+        // No Fire" is grouped by its outcome rather than by the words it opens with.
+        if (NO_FIRE.matcher(normalized).find()) {
+            return false;
+        }
+        return FIRE_WORD.matcher(normalized).find();
     }
 }

@@ -19,8 +19,7 @@ class IncidentCategoryTest {
             "Fire Rescue - Alarm",
             "Vehicle Fire",
             "Outside Fire",
-            "fire response",
-            "Alarm - No Fire"
+            "fire response"
     })
     void typesNamingAFireAreGroupedWithFire(String incidentType) {
         assertThat(IncidentCategory.of(incidentType)).isEqualTo(IncidentCategory.FIRE);
@@ -37,6 +36,21 @@ class IncidentCategoryTest {
     void fireIsMatchedAsAWholeWord() {
         assertThat(IncidentCategory.of("Medical Response - Firearm")).isEqualTo(IncidentCategory.MEDICAL);
         assertThat(IncidentCategory.of("Firearm Injury")).isEqualTo(IncidentCategory.OTHER);
+    }
+
+    /**
+     * A type reporting that there was no fire is an alarm call, not a fire — including when it
+     * opens with the word, since the outcome is what the type is telling you.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Alarm - No Fire",
+            "alarm - no fire",
+            "Fire Alarm - No Fire",
+            "Non-Fire Rescue"
+    })
+    void typesReportingNoFireStayInOther(String incidentType) {
+        assertThat(IncidentCategory.of(incidentType)).isEqualTo(IncidentCategory.OTHER);
     }
 
     @ParameterizedTest
