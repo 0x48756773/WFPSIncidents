@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  The analytics tag, in one place so every page carries it.
+
+  It used to be pasted into index.html alone, which meant /about was invisible: it drew
+  search impressions but reported no visitors, because nothing on it ever reported one.
+  Rendered only when app.analyticsId is set, so tests and local runs stay out of the
+  live property.
+-->
+<head>
+<th:block th:fragment="tag">
+    <script th:if="${analyticsId != null and !analyticsId.isEmpty()}"
+            async th:src="'https://www.googletagmanager.com/gtag/js?id=' + ${analyticsId}"></script>
+    <script th:if="${analyticsId != null and !analyticsId.isEmpty()}" th:inline="javascript">
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', /*[[${analyticsId}]]*/ '');
+    </script>
+</th:block>
+</head>
+</html>

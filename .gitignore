@@ -40,3 +40,7 @@ build/
 ### Local secrets ###
 # Real values live here; .env.example is the tracked template.
 .env
+
+### Claude Code ###
+# Local launch config holds absolute machine paths.
+.claude/

@@ -35,6 +35,15 @@ class AboutPageTest {
                 .andReturn().getResponse().getContentAsString();
     }
 
+    /**
+     * Prose in the template is wrapped to a sensible line length, so a sentence being asserted
+     * on is usually split across lines. Collapsing runs of whitespace lets these tests assert
+     * on what the page says rather than on how the source happens to be laid out.
+     */
+    private String renderAsProse() throws Exception {
+        return render().replaceAll("\\s+", " ");
+    }
+
     @Test
     void aboutPageIsIndexableAndCanonicalToItself() throws Exception {
         String html = render();
@@ -65,5 +74,29 @@ class AboutPageTest {
 
         assertThat(html).contains("not affiliated with WFPS");
         assertThat(html).contains("call 911");
+    }
+
+    /**
+     * A steady stream of visitors arrive searching for PulsePoint in Winnipeg and were met
+     * with a page that never mentioned it, so they had no way to tell what they had found.
+     * The answer has to be here, and it has to disclaim affiliation in both directions —
+     * PulsePoint is someone else's service and naming it must not imply otherwise.
+     */
+    @Test
+    void aboutPageAnswersThePulsePointQuestionAndDisclaimsAffiliation() throws Exception {
+        String prose = renderAsProse();
+
+        assertThat(prose).contains("id=\"pulsepoint\"");
+        assertThat(prose).contains("PulsePoint Foundation");
+        assertThat(prose).contains("not affiliated with this site");
+    }
+
+    /** Both ways back are named, because returning readers are what this site has least of. */
+    @Test
+    void aboutPageExplainsHowToCheckBackWithoutRememberingTheAddress() throws Exception {
+        String prose = renderAsProse();
+
+        assertThat(prose).contains("Add to Home Screen");
+        assertThat(prose).contains("/feed.xml");
     }
 }

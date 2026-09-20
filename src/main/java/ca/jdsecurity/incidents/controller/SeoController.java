@@ -30,9 +30,13 @@ public class SeoController {
     @GetMapping(value = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
     @ResponseBody
     public String robots() {
+        // /api/incidents is what the open page polls for its own updates. It holds nothing
+        // the rendered page does not, so crawling it only spends crawl budget on a second
+        // copy of the same data — and on a URL whose content changes every minute.
         return """
                 User-agent: *
                 Allow: /
+                Disallow: /api/
 
                 Sitemap: %s/sitemap.xml
                 """.formatted(baseUrl);

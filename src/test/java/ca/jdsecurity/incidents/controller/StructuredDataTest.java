@@ -112,4 +112,39 @@ class StructuredDataTest {
     void datasetOmitsNonExistentUpdateFrequencyProperty() {
         assertThat(node("Dataset").has("updateFrequency")).isFalse();
     }
+
+    /**
+     * Google requires the answers in FAQPage markup to be present on the page for a reader to
+     * see. Marked-up text that is not visible is a structured data violation, and these two
+     * copies of the same questions live in different parts of the template, so it is easy to
+     * edit one and forget the other.
+     */
+    @Test
+    void everyMarkedUpQuestionIsAlsoVisibleOnThePage() throws Exception {
+        String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
+        JsonNode questions = node("FAQPage").path("mainEntity");
+
+        assertThat(questions).isNotEmpty();
+        for (JsonNode question : questions) {
+            String asked = question.path("name").asText();
+            assertThat(html)
+                    .as("question %s is marked up but not shown on the page", asked)
+                    .contains("<h3>" + asked + "</h3>");
+            assertThat(question.path("acceptedAnswer").path("text").asText())
+                    .as("question %s has no answer", asked)
+                    .isNotEmpty();
+        }
+    }
+
+    /** The question the largest share of this page's visitors actually searched for. */
+    @Test
+    void faqAnswersTheQuestionMostVisitorsArriveWith() {
+        JsonNode questions = node("FAQPage").path("mainEntity");
+
+        List<String> asked = new java.util.ArrayList<>();
+        questions.forEach(question -> asked.add(question.path("name").asText()));
+
+        assertThat(asked).contains("Is there a fire in Winnipeg right now?");
+        assertThat(asked).contains("Where is the fire in Winnipeg right now?");
+    }
 }

@@ -5,16 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${pageTitle}">Winnipeg Fire Incidents – Live WFPS Active Incident Map</title>
 
-    <!-- Google Analytics -->
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FGQZ0FFFV1"></script>
-    <script>
-     window.dataLayer = window.dataLayer || [];
-     function gtag(){dataLayer.push(arguments);}
-     gtag('js', new Date());
-
-     gtag('config', 'G-FGQZ0FFFV1');
-    </script>
+    <!-- Analytics, shared with /about so both pages are actually measured. -->
+    <th:block th:replace="~{fragments/analytics :: tag}"></th:block>
 
     <!-- SEO -->
     <meta name="description" th:content="${pageDescription}">
@@ -81,6 +73,52 @@
           "sameAs": "https://github.com/0x48756773"
         },
         {
+          "@type": "FAQPage",
+          "@id": "[[${baseUrl}]]/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is there a fire in Winnipeg right now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "This page lists every call the Winnipeg Fire Paramedic Service currently has units assigned to, including fire rescue calls, medical responses and other emergency dispatches. The count at the top of the page is the live total and the map shows which neighbourhood each call is in. It is rebuilt from the City of Winnipeg's published dispatch data every [[${refreshLabel}]]."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Where is the fire in Winnipeg right now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The published data locates each call to a neighbourhood, never to a street address, so this map can show which neighbourhood a call is in and nothing finer. Markers are drawn at an offset inside the correct neighbourhood boundary so several calls in one area stay legible. Read a marker as somewhere in this neighbourhood."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why are there so many sirens near me right now?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Check the map for calls in your part of Winnipeg. Note that this map covers the Winnipeg Fire Paramedic Service only, so sirens you hear may belong to a call that never appears here."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this show Winnipeg police calls?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. The City of Winnipeg publishes dispatch data for the Winnipeg Fire Paramedic Service only. Winnipeg Police Service incidents are not in the feed this site reads and are never shown here."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is this PulsePoint?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. PulsePoint is a separate service operated by the PulsePoint Foundation and is not affiliated with this site. This is an independent map built from the City of Winnipeg's own published open data, covering Winnipeg Fire Paramedic Service calls."
+              }
+            }
+          ]
+        },
+        {
           "@type": "Dataset",
           "@id": "[[${baseUrl}]]/#dataset",
           "name": "Winnipeg Fire Paramedic Service incident dispatches",
@@ -121,15 +159,38 @@
     <h1 class="page-title">WFPS Active Incident Map</h1>
     <p class="page-subtitle">Real-time map of active <strong>Winnipeg Fire Paramedic Service</strong> incidents across Winnipeg, Manitoba. Data refreshes every <span th:text="${refreshLabel}">minute</span> from the <a href="https://data.winnipeg.ca/" target="_blank" rel="noopener">City of Winnipeg Open Data portal</a>. Incidents include fire rescue calls, medical responses, and other emergency dispatches.</p>
 
-    <p class="page-updated" th:if="${lastUpdatedIso != null}">
-        Last updated <time th:datetime="${lastUpdatedIso}" th:text="${lastUpdatedDisplay}"></time>
-    </p>
+    <!--
+      The most-searched question this page answers, answered in text. Rendered server-side
+      so it is in the HTML a crawler reads and is readable without JavaScript; the refresh
+      cycle updates the sentence in place afterwards.
+    -->
+    <section class="live-summary" aria-labelledby="live-summary-question">
+        <h2 id="live-summary-question" class="live-summary-question">Is there a fire in Winnipeg right now?</h2>
+        <p id="live-summary-answer" class="live-summary-answer" aria-live="polite"
+           th:text="${summary.sentence()}">No Winnipeg Fire Paramedic Service calls are active right now.</p>
+
+        <p class="page-updated" th:if="${lastUpdatedIso != null}">
+            Last updated <time id="last-updated" th:datetime="${lastUpdatedIso}" th:text="${lastUpdatedDisplay}"></time>
+        </p>
+    </section>
+
+    <!--
+      Shown only once the browser reports the app is installable and the reader has not
+      dismissed it before. Sits above the map because the map fills the viewport: anything
+      below it is below the fold, and four readers in five never scroll that far.
+    -->
+    <div id="install-bar" class="install-bar" hidden>
+        <span id="install-bar-text" class="install-bar-text">Add this map to your home screen to check it in one tap.</span>
+        <button type="button" id="install-accept" class="install-bar-btn">Add</button>
+        <button type="button" id="install-dismiss" class="install-bar-dismiss" aria-label="Dismiss">&times;</button>
+    </div>
 
     <p class="page-about-link">
         <a href="/about">Read more about the data, its limits and how this site is built</a>
     </p>
 
-    <div th:if="${!dataSourceAvailable}" class="alert alert-warning" role="alert">
+    <!-- Toggled in place by the refresh cycle, so the banner appears and clears without a reload. -->
+    <div id="source-warning" class="alert alert-warning" role="alert" th:attr="hidden=${dataSourceAvailable ? 'hidden' : null}">
         <strong>Data source unavailable.</strong> The City of Winnipeg Open Data portal could not be reached. Incident data shown may be outdated. The page will automatically display fresh data once the source comes back online.
     </div>
 
@@ -176,10 +237,10 @@
         </summary>
 
         <div class="incident-legend">
-            <button class="incident-chip incident-chip-fire filter-btn filter-btn-active" data-category="fire">Fire Rescue</button>
-            <button class="incident-chip incident-chip-medical filter-btn filter-btn-active" data-category="medical">Medical Response</button>
-            <button class="incident-chip incident-chip-other filter-btn filter-btn-active" data-category="other">Other Calls</button>
-            <button id="toggle-closed" class="incident-chip incident-chip-closed filter-btn filter-btn-active">Recently Closed</button>
+            <button type="button" aria-pressed="true" class="incident-chip incident-chip-fire filter-btn filter-btn-active" data-category="fire">Fire Rescue</button>
+            <button type="button" aria-pressed="true" class="incident-chip incident-chip-medical filter-btn filter-btn-active" data-category="medical">Medical Response</button>
+            <button type="button" aria-pressed="true" class="incident-chip incident-chip-other filter-btn filter-btn-active" data-category="other">Other Calls</button>
+            <button type="button" aria-pressed="true" id="toggle-closed" class="incident-chip incident-chip-closed filter-btn filter-btn-active">Recently Closed</button>
             <span id="refresh-badge" class="refresh-badge"></span>
         </div>
 
@@ -198,10 +259,16 @@
                     <th>Incident Number</th>
                 </tr>
                 </thead>
-                <tbody>
+                <tbody id="incident-rows">
+                <!--
+                  maps.js rebuilds these rows from /api/incidents on each refresh and must
+                  produce the same markup; see buildRow() there. The server render is what a
+                  crawler and a reader without JavaScript get, so both have to stay in step.
+                -->
                 <tr th:each="data: ${incidents}"
                     th:classappend="|incident-row incident-row-${data.CATEGORY}${data.CLOSED ? ' incident-row-closed' : ''}|"
-                    th:attr="data-incident=${data.INCIDENT_NUMBER}, data-closed=${data.CLOSED}"
+                    th:attr="data-incident=${data.INCIDENT_NUMBER}, data-closed=${data.CLOSED}, data-category=${data.CATEGORY}"
+                    tabindex="0"
                     style="cursor:pointer">
                     <td data-label="Incident Type"><span th:text="${data.INCIDENT_TYPE}"></span></td>
                     <td data-label="Category"><span class="badge"
@@ -260,6 +327,53 @@
             an official classification. The exact published type always appears in the table.
         </p>
     </details>
+
+    <!--
+      Visible counterpart to the FAQPage block in the head. Google requires the marked-up
+      answers to be present on the page, so these two must be edited together.
+    -->
+    <section class="page-notes page-faq">
+        <h2>Common questions</h2>
+
+        <h3>Is there a fire in Winnipeg right now?</h3>
+        <p>
+            This page lists every call the Winnipeg Fire Paramedic Service currently has units
+            assigned to, including fire rescue calls, medical responses and other emergency
+            dispatches. The count at the top of the page is the live total and the map shows which
+            neighbourhood each call is in. It is rebuilt from the City of Winnipeg&rsquo;s published
+            dispatch data every <span th:text="${refreshLabel}">minute</span>.
+        </p>
+
+        <h3>Where is the fire in Winnipeg right now?</h3>
+        <p>
+            The published data locates each call to a neighbourhood, never to a street address, so
+            this map can show which neighbourhood a call is in and nothing finer. Markers are drawn
+            at an offset inside the correct neighbourhood boundary so several calls in one area stay
+            legible. Read a marker as <em>somewhere in this neighbourhood</em>.
+        </p>
+
+        <h3>Why are there so many sirens near me right now?</h3>
+        <p>
+            Check the map for calls in your part of Winnipeg. Note that this map covers the Winnipeg
+            Fire Paramedic Service only, so sirens you hear may belong to a call that never appears
+            here.
+        </p>
+
+        <h3>Does this show Winnipeg police calls?</h3>
+        <p>
+            No. The City of Winnipeg publishes dispatch data for the Winnipeg Fire Paramedic Service
+            only. Winnipeg Police Service incidents are not in the feed this site reads and are never
+            shown here.
+        </p>
+
+        <h3>Is this PulsePoint?</h3>
+        <p>
+            No. PulsePoint is a separate service operated by the PulsePoint Foundation and is not
+            affiliated with this site. This is an independent map built from the City of
+            Winnipeg&rsquo;s own published open data, covering Winnipeg Fire Paramedic Service calls.
+            <a href="/about#pulsepoint">More on how the two differ</a>.
+        </p>
+    </section>
 
     <footer class="site-footer">
         <a href="/about">About the data</a>

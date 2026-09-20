@@ -16,17 +16,34 @@ public class SiteIdentityAdvice {
     private final String baseUrl;
     private final String contactEmail;
     private final String authorName;
+    private final String analyticsId;
     private final RefreshCadence refreshCadence;
 
     public SiteIdentityAdvice(
             @Value("${app.baseUrl}") String baseUrl,
             @Value("${app.contactEmail}") String contactEmail,
             @Value("${app.authorName}") String authorName,
+            @Value("${app.analyticsId:}") String analyticsId,
             RefreshCadence refreshCadence) {
         this.baseUrl = stripTrailingSlash(baseUrl);
         this.contactEmail = contactEmail;
         this.authorName = authorName;
+        this.analyticsId = analyticsId == null ? "" : analyticsId.trim();
         this.refreshCadence = refreshCadence;
+    }
+
+    /**
+     * Measurement ID for the analytics fragment, empty to emit no tag at all.
+     *
+     * <p>It was previously a literal in {@code index.html}, which had two consequences: the
+     * tag existed on exactly one page — {@code /about} was never measured, so its traffic
+     * read as zero — and there was no way to deploy the app anywhere without it reporting
+     * into the live property. Setting this to empty emits no tag at all, which is what a
+     * staging or local run wants.
+     */
+    @ModelAttribute("analyticsId")
+    public String analyticsId() {
+        return analyticsId;
     }
 
     /** Reads after "every", so the copy states the configured cadence rather than a literal. */
