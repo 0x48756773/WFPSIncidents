@@ -355,26 +355,22 @@
         }[char]));
     }
 
-    function getIncidentCategory(incidentType) {
-        const normalizedType = String(incidentType ?? '').toLowerCase();
-        if (normalizedType.startsWith('fire rescue')) {
-            return 'fire';
-        }
-        if (normalizedType.includes('medical response')) {
-            return 'medical';
-        }
-        return 'other';
+    // The grouping rule lives server-side, in IncidentCategory, and rides along with each
+    // incident. Deriving it here from the free-text type meant keeping the same rule in two
+    // languages -- the table's copy and this one -- in step by hand.
+    const categoryColors = {
+        fire: '#dc3545',
+        medical: '#0d6efd',
+        other: '#6c757d'
+    };
+
+    function getIncidentCategory(incident) {
+        const category = String(incident?.CATEGORY ?? '').toLowerCase();
+        return Object.prototype.hasOwnProperty.call(categoryColors, category) ? category : 'other';
     }
 
-    function getCategoryColor(incidentType) {
-        switch (getIncidentCategory(incidentType)) {
-            case 'fire':
-                return '#dc3545';
-            case 'medical':
-                return '#0d6efd';
-            default:
-                return '#6c757d';
-        }
+    function getCategoryColor(incident) {
+        return categoryColors[getIncidentCategory(incident)];
     }
 
     function isClosed(incident) {
@@ -616,7 +612,7 @@
 
     function applyFilters() {
         for (const incident of incidents) {
-            const category = getIncidentCategory(incident.INCIDENT_TYPE);
+            const category = getIncidentCategory(incident);
             const visible = isVisible(category, isClosed(incident));
 
             const marker = markersByIncident.get(String(incident.INCIDENT_NUMBER));
@@ -736,7 +732,7 @@
             }
 
             const closed = isClosed(incident);
-            const markerColor = getCategoryColor(incident.INCIDENT_TYPE);
+            const markerColor = getCategoryColor(incident);
             const statusLine = closed
                 ? `Status: Closed${incident.DURATION ? ' (on scene ' + escapeHtml(incident.DURATION) + ')' : ''}<br/>`
                 : 'Status: Active<br/>';

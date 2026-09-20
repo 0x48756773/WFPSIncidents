@@ -200,14 +200,13 @@
                 </thead>
                 <tbody>
                 <tr th:each="data: ${incidents}"
-                    th:with="incidentType=${data.INCIDENT_TYPE != null ? data.INCIDENT_TYPE.toLowerCase() : ''}, incidentCategory=${#strings.startsWith(incidentType, 'fire rescue') ? 'fire' : (#strings.contains(incidentType, 'medical response') ? 'medical' : 'other')}"
-                    th:classappend="|incident-row incident-row-${incidentCategory}${data.CLOSED ? ' incident-row-closed' : ''}|"
+                    th:classappend="|incident-row incident-row-${data.CATEGORY}${data.CLOSED ? ' incident-row-closed' : ''}|"
                     th:attr="data-incident=${data.INCIDENT_NUMBER}, data-closed=${data.CLOSED}"
                     style="cursor:pointer">
                     <td data-label="Incident Type"><span th:text="${data.INCIDENT_TYPE}"></span></td>
                     <td data-label="Category"><span class="badge"
-                                                  th:classappend="| incident-badge incident-badge-${incidentCategory}|"
-                                                  th:text="${incidentCategory == 'fire' ? 'Fire Rescue' : (incidentCategory == 'medical' ? 'Medical Response' : 'Other')}"
+                                                  th:classappend="| incident-badge incident-badge-${data.CATEGORY}|"
+                                                  th:text="${data.CATEGORY_LABEL}"
                     ></span></td>
                     <td data-label="Status">
                         <span th:if="${data.CLOSED}" class="badge incident-badge-closed"

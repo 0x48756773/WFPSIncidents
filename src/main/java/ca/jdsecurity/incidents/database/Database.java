@@ -1,5 +1,6 @@
 package ca.jdsecurity.incidents.database;
 
+import ca.jdsecurity.incidents.incident.IncidentCategory;
 import ca.jdsecurity.incidents.service.CityOfWinnipegService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -208,9 +209,16 @@ public class Database {
             String rawClosedTime = rs.getString("closed_time");
             boolean closed = rawClosedTime != null && !rawClosedTime.isBlank();
 
+            String incidentType = rs.getString("incident_type");
+            // Grouped once, here, rather than by the template and maps.js separately: the
+            // badge, the row colour, the marker colour and the filters all read this answer.
+            IncidentCategory category = IncidentCategory.of(incidentType);
+
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("INCIDENT_NUMBER", rs.getString("incident_number"));
-            row.put("INCIDENT_TYPE", rs.getString("incident_type"));
+            row.put("INCIDENT_TYPE", incidentType);
+            row.put("CATEGORY", category.getId());
+            row.put("CATEGORY_LABEL", category.getLabel());
             row.put("IS_MOTOR", rs.getString("is_motor"));
             row.put("UNITS", rs.getString("units"));
             row.put("NEIGHBOURHOOD", rs.getString("neighbourhood"));
