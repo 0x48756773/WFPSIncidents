@@ -91,7 +91,7 @@ class IncidentApiControllerTest {
 
         mockMvc.perform(get("/api/incidents"))
                 .andExpect(jsonPath("$.summarySentence")
-                        .value("1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue."));
+                        .value("1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue call."));
     }
 
     /** A poll must still see the source going down, even when the data behind it has not moved. */

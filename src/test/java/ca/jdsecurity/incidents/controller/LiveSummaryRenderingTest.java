@@ -83,8 +83,8 @@ class LiveSummaryRenderingTest {
         String html = render();
 
         assertThat(html).contains("3 Winnipeg Fire Paramedic Service calls are active right now");
-        assertThat(html).contains("1 fire rescue");
-        assertThat(html).contains("2 medical response");
+        assertThat(html).contains("1 fire rescue call");
+        assertThat(html).contains("2 medical responses");
     }
 
     /** Closed calls are still listed on the page, but they are not what "right now" means. */

@@ -65,17 +65,26 @@ public record IncidentSummary(
 
         List<String> parts = new ArrayList<>();
         if (activeFire > 0) {
-            parts.add(activeFire + " fire rescue");
+            parts.add(count(activeFire, "fire rescue call", "fire rescue calls"));
         }
         if (activeMedical > 0) {
-            parts.add(activeMedical + " medical response");
+            parts.add(count(activeMedical, "medical response", "medical responses"));
         }
         if (activeOther > 0) {
-            parts.add(activeOther + " other");
+            parts.add(count(activeOther, "other call", "other calls"));
         }
 
         return "%d Winnipeg Fire Paramedic Service %s active right now — %s."
                 .formatted(activeTotal, activeTotal == 1 ? "call is" : "calls are", join(parts));
+    }
+
+    /**
+     * Each category pluralises differently: "medical response" takes an -s on the noun,
+     * "fire rescue" needs the word "call" to take one at all, and "3 others" would read as
+     * a different thing entirely. So each carries its own pair rather than sharing a rule.
+     */
+    private static String count(int number, String singular, String plural) {
+        return number + " " + (number == 1 ? singular : plural);
     }
 
     private static String join(List<String> parts) {
