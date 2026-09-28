@@ -20,6 +20,11 @@
      *
      * No-ops when the tag is absent, which is the case locally, under test, and for anyone
      * running an ad blocker. Nothing here may depend on it having run.
+     *
+     * Never name a parameter source, medium, campaign, term or content. GA4 reads those as
+     * traffic-source fields and re-attributes the session: incident_open once sent
+     * `source: 'map_marker'`, and GA reported map_marker as a referrer, taking the sessions
+     * away from Google and Facebook.
      */
     function track(name, params) {
         if (typeof window.gtag === 'function') {
@@ -772,7 +777,7 @@
     function wireRow(row) {
         row.addEventListener('click', () => {
             selectIncident(row.dataset.incident);
-            track('incident_open', { source: 'table_row', category: row.dataset.category });
+            track('incident_open', { open_from: 'table_row', category: row.dataset.category });
         });
         // The rows carry a click handler and so must be reachable without a mouse; they are
         // given tabindex in the template, which is only half of it without this.
@@ -782,7 +787,7 @@
             }
             event.preventDefault();
             selectIncident(row.dataset.incident);
-            track('incident_open', { source: 'table_row_keyboard', category: row.dataset.category });
+            track('incident_open', { open_from: 'table_row_keyboard', category: row.dataset.category });
         });
     }
 
@@ -1003,7 +1008,7 @@
                 // created it, and the type it was created with can be corrected later.
                 const current = incidentByNumber(key) || incident;
                 track('incident_open', {
-                    source: 'map_marker',
+                    open_from: 'map_marker',
                     category: getIncidentCategory(current)
                 });
             });
@@ -1274,7 +1279,7 @@
         }
         if (deepLinked) {
             selectIncident(deepLinked, { revealRow: true, updateHash: false });
-            track('incident_open', { source: 'deep_link' });
+            track('incident_open', { open_from: 'deep_link' });
         }
 
         // Attached after the opening view is settled, so automatic framing is never
