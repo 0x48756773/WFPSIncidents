@@ -169,6 +169,15 @@
         <p id="live-summary-answer" class="live-summary-answer" aria-live="polite"
            th:text="${summary.sentence()}">No Winnipeg Fire Paramedic Service calls are active right now.</p>
 
+        <!--
+          Calls published without any units attached yet. Hidden rather than omitted when
+          nothing is waiting: the refresh cycle patches this element in place, and it cannot
+          patch a node the server decided not to render.
+        -->
+        <p id="awaiting-dispatch" class="live-summary-dispatch" aria-live="polite"
+           th:text="${summary.dispatchSentence()}"
+           th:attr="hidden=${summary.awaitingDispatch > 0 ? null : 'hidden'}"></p>
+
         <p class="page-updated" th:if="${lastUpdatedIso != null}">
             Last updated <time id="last-updated" th:datetime="${lastUpdatedIso}" th:text="${lastUpdatedDisplay}"></time>
         </p>

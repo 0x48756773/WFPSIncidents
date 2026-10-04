@@ -1146,6 +1146,15 @@
             answer.textContent = data.summarySentence;
         }
 
+        // The empty string is a meaningful value here, not a missing one: it is how the
+        // server says nothing is waiting, and the line is hidden rather than left showing
+        // the last count it had.
+        const dispatch = document.getElementById('awaiting-dispatch');
+        if (dispatch && typeof data.dispatchSentence === 'string') {
+            dispatch.textContent = data.dispatchSentence;
+            dispatch.hidden = data.dispatchSentence === '';
+        }
+
         const updated = document.getElementById('last-updated');
         if (updated && data.lastUpdatedIso) {
             updated.setAttribute('datetime', data.lastUpdatedIso);

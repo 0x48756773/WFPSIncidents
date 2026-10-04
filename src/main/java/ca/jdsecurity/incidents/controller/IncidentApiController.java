@@ -58,6 +58,11 @@ public class IncidentApiController {
         // number agreement in it, and a second copy of that in JavaScript is a second copy
         // to keep in step with this one.
         body.put("summarySentence", summary.sentence());
+        // Written here too, for the same reason: the awaiting-dispatch line has number
+        // agreement and a duration in it, and the empty string is how the page is told to
+        // hide it. Sent alongside the raw count in the summary rather than instead of it,
+        // so a client that wants the number does not have to read it back out of prose.
+        body.put("dispatchSentence", summary.dispatchSentence());
         // Omitted rather than sent as null before the first successful sync, for the same
         // reason the sitemap omits lastmod: there is no honest value, and the client
         // treating a null as "no change" is one fewer thing to get wrong.
