@@ -11,7 +11,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,10 @@ class LiveSummaryRenderingTest {
     @MockBean
     private Database database;
 
+    /** An hour and a half after the call time below, so the wait is a recognisable figure. */
+    private static final ZonedDateTime SYNCED_AT =
+            ZonedDateTime.of(2026, 9, 18, 10, 45, 0, 0, ZoneId.of("America/Winnipeg"));
+
     /**
      * Every column the table template reads has to be present: Thymeleaf resolves these
      * against the map by key, and a key that is simply absent is an error rather than a
@@ -62,11 +67,8 @@ class LiveSummaryRenderingTest {
         row.put("NEIGHBOURHOOD", "Wolseley");
         row.put("WARD", "Daniel McIntyre");
         row.put("CALL_TIME", "September 18, 2026 at 09:15");
-        // The machine-readable counterpart the waiting time is measured from. Dated an hour
-        // and a half back so the figure is recognisable in the rendered page rather than
-        // being whatever the clock makes of a fixed timestamp.
-        row.put("CALL_TIME_ISO",
-                java.time.OffsetDateTime.now().minusMinutes(90).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+        // The machine-readable counterpart the waiting time is measured from, to SYNCED_AT.
+        row.put("CALL_TIME_ISO", "2026-09-18T09:15:00-05:00");
         row.put("CLOSED", closed);
         row.put("CLOSED_TIME", closed ? "September 18, 2026 at 09:45" : "");
         row.put("DURATION", closed ? "30m" : "");
@@ -117,8 +119,10 @@ class LiveSummaryRenderingTest {
         when(database.getRecentIncidents()).thenReturn(List.of(
                 incident("26-001", "Fire Rescue - Structure", false),
                 incident("26-002", "Medical Response - Fall", false, null)));
+        when(database.getLastSuccessfulSync()).thenReturn(SYNCED_AT);
 
-        assertThat(render()).contains("1 active call is awaiting dispatch — waiting 1h 30m so far.");
+        assertThat(render()).contains(
+                "1 active call is awaiting dispatch — waiting 1h 30m as of the last update.");
     }
 
     /** Hidden rather than absent: the refresh cycle patches this element in place. */

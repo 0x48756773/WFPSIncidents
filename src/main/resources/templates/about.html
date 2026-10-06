@@ -131,9 +131,11 @@
         </p>
         <p>
             An active call that lists no units at all is counted on the front page as
-            <em>awaiting dispatch</em>, alongside how long the one waiting longest has waited.
-            That is read straight from the feed: the <code>units</code> field is absent until a
-            unit is attached to the incident. Read it as <em>no units are recorded against this
+            <em>awaiting dispatch</em>, alongside how long the one waiting longest has waited
+            as of the last update &mdash; not as of the moment you load the page, so if the
+            City&rsquo;s feed goes quiet the figure stops with it rather than counting up against
+            calls this site can no longer see. The count is read straight from the feed: the
+            <code>units</code> field is absent until a unit is attached to the incident. Read it as <em>no units are recorded against this
             call yet</em> rather than as a measured response time &mdash; the feed publishes on a
             five-minute cycle, so a call can already have units on the way before this site can
             see them, and a call that closes without ever listing a unit is treated as attended

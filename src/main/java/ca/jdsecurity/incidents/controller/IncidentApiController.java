@@ -49,7 +49,9 @@ public class IncidentApiController {
         ZonedDateTime lastSync = database.getLastSuccessfulSync();
         boolean available = database.isDataSourceAvailable();
 
-        IncidentSummary summary = IncidentSummary.of(incidentList);
+        // Measured to the sync the ETag below names, never to now, for the same reason as on
+        // the page: a body that moved with the clock could be answered with a stale 304.
+        IncidentSummary summary = IncidentSummary.of(incidentList, lastSync == null ? null : lastSync.toInstant());
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("incidents", incidentList);

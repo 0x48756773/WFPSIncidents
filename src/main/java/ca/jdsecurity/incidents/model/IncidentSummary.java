@@ -23,10 +23,10 @@ import java.util.Map;
  * have ended up reporting no fires under a table showing them.
  *
  * <p>{@code oldestAwaitingDispatchMinutes} is {@code null} rather than zero when nothing is
- * waiting — or when the waiting calls carry no parseable call time — for the same reason the
- * sitemap omits {@code lastmod} before the first sync: zero minutes is a real value, and
- * sending it for "unknown" invites the client to print "waiting 0m" about a call it cannot
- * time.
+ * waiting — or when the waiting calls carry no parseable call time, or there is no sync to
+ * measure to — for the same reason the sitemap omits {@code lastmod} before the first sync:
+ * zero minutes is a real value, and sending it for "unknown" invites the client to print
+ * "waiting 0m" about a call it cannot time.
  */
 public record IncidentSummary(
         int activeFire,
@@ -37,12 +37,23 @@ public record IncidentSummary(
         int awaitingDispatch,
         Long oldestAwaitingDispatchMinutes) {
 
-    public static IncidentSummary of(List<Map<String, Object>> incidents) {
-        return of(incidents, Instant.now());
-    }
-
-    /** Takes the clock as an argument so the waiting time is a fixed value under test. */
-    public static IncidentSummary of(List<Map<String, Object>> incidents, Instant now) {
+    /**
+     * Measures the wait up to {@code asOf}, the last successful sync: the moment the list was
+     * last known to be true, not the moment it is rendered. Two reasons, and there is
+     * deliberately no overload that reads the clock instead:
+     *
+     * <ul>
+     *   <li>The page and the poll are both ETagged on the sync time. A figure that advanced
+     *       with the wall clock could be answered with a 304 carrying an older one.</li>
+     *   <li>During an upstream outage the table holds its last good copy. Measured to now, a
+     *       call frozen in it would read as waiting for hours after it had most likely been
+     *       dispatched where this site cannot see it.</li>
+     * </ul>
+     *
+     * <p>{@code null} when nothing has synced since startup: there is no honest moment to
+     * measure to, so the sentence drops the duration rather than inventing one.
+     */
+    public static IncidentSummary of(List<Map<String, Object>> incidents, Instant asOf) {
         int fire = 0, medical = 0, other = 0, closedCount = 0, awaiting = 0;
         Instant oldestAwaitingCall = null;
 
@@ -66,7 +77,7 @@ public record IncidentSummary(
         }
 
         return new IncidentSummary(fire, medical, other, fire + medical + other, closedCount,
-                awaiting, minutesWaiting(oldestAwaitingCall, now));
+                awaiting, minutesWaiting(oldestAwaitingCall, asOf));
     }
 
     /** The grouping used by the table template and the map markers, not a second copy of it. */
@@ -129,6 +140,10 @@ public record IncidentSummary(
      * <p>A second sentence rather than a clause inside {@link #sentence()}: that one answers
      * the question in the heading above it, and it is the text search engines read as the
      * page's answer.
+     *
+     * <p>Says "as of the last update" because that is what the wait is measured to (see
+     * {@link #of}). The line sits directly above the "Last updated" time it refers to, so
+     * when the feed goes quiet the reader can see both have stopped together.
      */
     public String dispatchSentence() {
         if (awaitingDispatch == 0) {
@@ -142,8 +157,8 @@ public record IncidentSummary(
 
         String waited = waitLabel(oldestAwaitingDispatchMinutes);
         return awaitingDispatch == 1
-                ? calls + " awaiting dispatch — waiting " + waited + " so far."
-                : calls + " awaiting dispatch — the oldest has been waiting " + waited + ".";
+                ? calls + " awaiting dispatch — waiting " + waited + " as of the last update."
+                : calls + " awaiting dispatch — the oldest has been waiting " + waited + " as of the last update.";
     }
 
     /**
@@ -180,13 +195,13 @@ public record IncidentSummary(
         }
     }
 
-    private static Long minutesWaiting(Instant calledAt, Instant now) {
-        if (calledAt == null) {
+    private static Long minutesWaiting(Instant calledAt, Instant asOf) {
+        if (calledAt == null || asOf == null) {
             return null;
         }
-        // Clamped at zero: a call time slightly ahead of this server's clock is a clock
-        // difference, not a call that will be dispatched in the past.
-        return Math.max(0, Duration.between(calledAt, now).toMinutes());
+        // Clamped at zero: a call time slightly ahead of the sync that fetched it is a clock
+        // difference between this server and the feed, not a negative wait.
+        return Math.max(0, Duration.between(calledAt, asOf).toMinutes());
     }
 
     /**

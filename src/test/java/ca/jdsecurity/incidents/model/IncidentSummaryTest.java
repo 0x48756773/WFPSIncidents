@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class IncidentSummaryTest {
 
-    /** The clock the waiting times below are measured against, so they are fixed values. */
-    private static final Instant NOW = Instant.parse("2026-09-18T15:30:00Z");
+    /** The last successful sync, which the waiting times below are measured to. */
+    private static final Instant SYNCED_AT = Instant.parse("2026-09-18T15:30:00Z");
 
     private static Map<String, Object> incident(String type, boolean closed) {
         return Map.of("INCIDENT_TYPE", type, "CLOSED", closed, "UNITS", "E1, L2");
@@ -43,7 +43,7 @@ class IncidentSummaryTest {
                 incident("Fire Rescue - Vehicle", false),
                 incident("Medical Response - Cardiac", false),
                 incident("Alarm Bells Ringing", false),
-                incident("Fire Rescue - Grass", true)));
+                incident("Fire Rescue - Grass", true)), SYNCED_AT);
 
         assertThat(summary.activeFire()).isEqualTo(2);
         assertThat(summary.activeMedical()).isEqualTo(1);
@@ -79,7 +79,7 @@ class IncidentSummaryTest {
 
         IncidentSummary summary = IncidentSummary.of(List.of(
                 incident("Fire Response", false),
-                incident("Alarm - No Fire", false)));
+                incident("Alarm - No Fire", false)), SYNCED_AT);
 
         assertThat(summary.activeFire()).isEqualTo(1);
         assertThat(summary.activeOther()).isEqualTo(1);
@@ -87,13 +87,13 @@ class IncidentSummaryTest {
 
     @Test
     void readsAsASentenceWhenNothingIsActive() {
-        assertThat(IncidentSummary.of(List.of()).sentence())
+        assertThat(IncidentSummary.of(List.of(), SYNCED_AT).sentence())
                 .isEqualTo("No Winnipeg Fire Paramedic Service calls are active right now.");
     }
 
     @Test
     void readsAsASentenceForASingleCall() {
-        String sentence = IncidentSummary.of(List.of(incident("Fire Rescue - Structure", false))).sentence();
+        String sentence = IncidentSummary.of(List.of(incident("Fire Rescue - Structure", false)), SYNCED_AT).sentence();
 
         assertThat(sentence).isEqualTo(
                 "1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue call.");
@@ -105,7 +105,7 @@ class IncidentSummaryTest {
                 incident("Fire Rescue - Structure", false),
                 incident("Medical Response - Cardiac", false),
                 incident("Medical Response - Fall", false),
-                incident("Alarm Bells Ringing", false))).sentence();
+                incident("Alarm Bells Ringing", false)), SYNCED_AT).sentence();
 
         assertThat(sentence).isEqualTo("4 Winnipeg Fire Paramedic Service calls are active right now"
                 + " — 1 fire rescue call, 2 medical responses and 1 other call.");
@@ -116,7 +116,7 @@ class IncidentSummaryTest {
     void omitsEmptyCategories() {
         String sentence = IncidentSummary.of(List.of(
                 incident("Medical Response - Cardiac", false),
-                incident("Medical Response - Fall", false))).sentence();
+                incident("Medical Response - Fall", false)), SYNCED_AT).sentence();
 
         assertThat(sentence).doesNotContain("fire rescue").doesNotContain("other");
         assertThat(sentence).contains("2 medical responses");
@@ -133,7 +133,7 @@ class IncidentSummaryTest {
                 undispatched("Medical Response - Fall", false, "2026-09-18T10:20:00-05:00"),
                 undispatched("Fire Response", false, "2026-09-18T10:15:00-05:00"),
                 undispatched("Alarm Bells Ringing", true, "2026-09-18T09:00:00-05:00"),
-                incident("Fire Rescue - Structure", false)), NOW);
+                incident("Fire Rescue - Structure", false)), SYNCED_AT);
 
         assertThat(summary.awaitingDispatch()).isEqualTo(2);
         // Still counted in their categories -- an undispatched call is an active call.
@@ -148,28 +148,44 @@ class IncidentSummaryTest {
         row.put("CLOSED", false);
         row.put("UNITS", "   ");
 
-        assertThat(IncidentSummary.of(List.of(row), NOW).awaitingDispatch()).isEqualTo(1);
+        assertThat(IncidentSummary.of(List.of(row), SYNCED_AT).awaitingDispatch()).isEqualTo(1);
     }
 
     @Test
     void measuresTheWaitFromTheOldestUndispatchedCall() {
         IncidentSummary summary = IncidentSummary.of(List.of(
                 undispatched("Medical Response - Fall", false, "2026-09-18T10:20:00-05:00"),
-                // 72 minutes before NOW, and the one the sentence has to report.
-                undispatched("Fire Response", false, "2026-09-18T09:18:00-05:00")), NOW);
+                // 72 minutes before SYNCED_AT, and the one the sentence has to report.
+                undispatched("Fire Response", false, "2026-09-18T09:18:00-05:00")), SYNCED_AT);
 
         assertThat(summary.oldestAwaitingDispatchMinutes()).isEqualTo(72);
         assertThat(summary.dispatchSentence())
-                .isEqualTo("2 active calls are awaiting dispatch — the oldest has been waiting 1h 12m.");
+                .isEqualTo("2 active calls are awaiting dispatch — the oldest has been waiting 1h 12m"
+                        + " as of the last update.");
     }
 
     @Test
     void readsAsASentenceForASingleUndispatchedCall() {
         IncidentSummary summary = IncidentSummary.of(List.of(
-                undispatched("Fire Response", false, "2026-09-18T10:16:00-05:00")), NOW);
+                undispatched("Fire Response", false, "2026-09-18T10:16:00-05:00")), SYNCED_AT);
 
         assertThat(summary.dispatchSentence())
-                .isEqualTo("1 active call is awaiting dispatch — waiting 14m so far.");
+                .isEqualTo("1 active call is awaiting dispatch — waiting 14m as of the last update.");
+    }
+
+    /**
+     * Before the first successful sync there is no moment the list is known to be true as
+     * of, so there is nothing honest to measure a wait to. The count survives; the duration
+     * does not.
+     */
+    @Test
+    void givesNoWaitWithoutASyncToMeasureTo() {
+        IncidentSummary summary = IncidentSummary.of(List.of(
+                undispatched("Fire Response", false, "2026-09-18T10:16:00-05:00")), null);
+
+        assertThat(summary.awaitingDispatch()).isEqualTo(1);
+        assertThat(summary.oldestAwaitingDispatchMinutes()).isNull();
+        assertThat(summary.dispatchSentence()).isEqualTo("1 active call is awaiting dispatch.");
     }
 
     /** Nothing waiting is not news, so the page gets nothing to show rather than a zero. */
@@ -177,7 +193,7 @@ class IncidentSummaryTest {
     void saysNothingWhenEverythingHasUnitsOnIt() {
         IncidentSummary summary = IncidentSummary.of(List.of(
                 incident("Fire Rescue - Structure", false),
-                undispatched("Medical Response - Fall", true, "2026-09-18T09:00:00-05:00")), NOW);
+                undispatched("Medical Response - Fall", true, "2026-09-18T09:00:00-05:00")), SYNCED_AT);
 
         assertThat(summary.awaitingDispatch()).isZero();
         assertThat(summary.oldestAwaitingDispatchMinutes()).isNull();
@@ -188,10 +204,10 @@ class IncidentSummaryTest {
     @Test
     void wordsAWaitShorterThanAMinute() {
         IncidentSummary summary = IncidentSummary.of(List.of(
-                undispatched("Fire Response", false, "2026-09-18T10:29:30-05:00")), NOW);
+                undispatched("Fire Response", false, "2026-09-18T10:29:30-05:00")), SYNCED_AT);
 
         assertThat(summary.dispatchSentence())
-                .isEqualTo("1 active call is awaiting dispatch — waiting under a minute so far.");
+                .isEqualTo("1 active call is awaiting dispatch — waiting under a minute as of the last update.");
     }
 
     /**
@@ -201,7 +217,7 @@ class IncidentSummaryTest {
     @Test
     void clampsACallTimeAheadOfTheClock() {
         IncidentSummary summary = IncidentSummary.of(List.of(
-                undispatched("Fire Response", false, "2026-09-18T10:35:00-05:00")), NOW);
+                undispatched("Fire Response", false, "2026-09-18T10:35:00-05:00")), SYNCED_AT);
 
         assertThat(summary.oldestAwaitingDispatchMinutes()).isZero();
     }
@@ -214,7 +230,7 @@ class IncidentSummaryTest {
     void stillCountsACallWhoseTimeCannotBeRead() {
         IncidentSummary summary = IncidentSummary.of(List.of(
                 undispatched("Fire Response", false, ""),
-                undispatched("Medical Response - Fall", false, "not a timestamp")), NOW);
+                undispatched("Medical Response - Fall", false, "not a timestamp")), SYNCED_AT);
 
         assertThat(summary.awaitingDispatch()).isEqualTo(2);
         assertThat(summary.oldestAwaitingDispatchMinutes()).isNull();
@@ -225,7 +241,7 @@ class IncidentSummaryTest {
     @Test
     void leavesTheFireAnswerAlone() {
         IncidentSummary summary = IncidentSummary.of(List.of(
-                undispatched("Fire Response", false, "2026-09-18T10:20:00-05:00")), NOW);
+                undispatched("Fire Response", false, "2026-09-18T10:20:00-05:00")), SYNCED_AT);
 
         assertThat(summary.sentence()).isEqualTo(
                 "1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue call.");
@@ -233,8 +249,8 @@ class IncidentSummaryTest {
 
     @Test
     void toleratesAMissingList() {
-        assertThat(IncidentSummary.of(null).activeTotal()).isZero();
-        assertThat(IncidentSummary.of(null).awaitingDispatch()).isZero();
-        assertThat(IncidentSummary.of(null).oldestAwaitingDispatchMinutes()).isNull();
+        assertThat(IncidentSummary.of(null, SYNCED_AT).activeTotal()).isZero();
+        assertThat(IncidentSummary.of(null, SYNCED_AT).awaitingDispatch()).isZero();
+        assertThat(IncidentSummary.of(null, SYNCED_AT).oldestAwaitingDispatchMinutes()).isNull();
     }
 }

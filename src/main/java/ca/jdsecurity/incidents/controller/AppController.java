@@ -79,8 +79,10 @@ public class AppController {
         model.addAttribute("neighbourhoodList", neighbourhoodList);
         // The answer to "is there a fire in Winnipeg right now", rendered into the HTML
         // rather than painted in by the map script, so it is readable without JavaScript
-        // and present for a crawler that does not wait for one.
-        model.addAttribute("summary", IncidentSummary.of(incidentList));
+        // and present for a crawler that does not wait for one. Any wait in it is measured to
+        // the sync the ETag above names, never to now, so a 304 cannot serve an outdated one.
+        model.addAttribute("summary",
+                IncidentSummary.of(incidentList, lastSync == null ? null : lastSync.toInstant()));
         // Freshness the crawler can read. The countdown badge in the table legend is
         // client-rendered and points at the *next* refresh; this is the last completed one.
         // Left null before the first successful sync so the page cannot claim a stale time.

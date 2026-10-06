@@ -106,7 +106,7 @@ class IncidentApiControllerTest {
     /**
      * The waiting count and the line that states it both travel on the poll. If either
      * stopped being sent, the page would keep showing whatever it was rendered with, which
-     * for a wait that only grows is the one number that must not freeze.
+     * for a wait that grows with every sync is the one number that must not freeze.
      */
     @Test
     void sendsTheAwaitingDispatchCountAndItsSentence() throws Exception {
@@ -115,12 +115,52 @@ class IncidentApiControllerTest {
                 undispatched("26-002", "Medical Response - Fall", "2026-09-18T09:20:00-05:00"),
                 undispatched("26-003", "Fire Response", "2026-09-18T09:25:00-05:00")));
         when(database.isDataSourceAvailable()).thenReturn(true);
+        when(database.getLastSuccessfulSync()).thenReturn(SYNCED_AT);
 
         mockMvc.perform(get("/api/incidents"))
                 .andExpect(jsonPath("$.summary.awaitingDispatch").value(2))
-                .andExpect(jsonPath("$.summary.oldestAwaitingDispatchMinutes").isNumber())
-                .andExpect(jsonPath("$.dispatchSentence",
-                        org.hamcrest.Matchers.startsWith("2 active calls are awaiting dispatch")));
+                .andExpect(jsonPath("$.summary.oldestAwaitingDispatchMinutes").value(10))
+                .andExpect(jsonPath("$.dispatchSentence").value(
+                        "2 active calls are awaiting dispatch — the oldest has been waiting 10m as of the last update."));
+    }
+
+    /**
+     * The response is ETagged on the sync time and the source's reachability, so it must be
+     * a function of nothing else. Measured to the wall clock, the wait would advance under an
+     * unchanged tag and a revalidation would get a 304 carrying an older figure. During an
+     * outage it would also keep climbing against a table that stopped updating — a call
+     * frozen in it reading as hours unanswered when it was most likely dispatched where this
+     * site cannot see it.
+     *
+     * <p>SYNCED_AT is weeks before the clock this test runs under, so a wait measured to now
+     * could not come out as ten minutes.
+     */
+    @Test
+    void measuresTheWaitToTheSyncTheETagNamesNotToNow() throws Exception {
+        when(database.getRecentIncidents()).thenReturn(List.of(
+                undispatched("26-002", "Medical Response - Fall", "2026-09-18T09:20:00-05:00")));
+        when(database.isDataSourceAvailable()).thenReturn(false);
+        when(database.getLastSuccessfulSync()).thenReturn(SYNCED_AT);
+
+        mockMvc.perform(get("/api/incidents"))
+                .andExpect(header().string("ETag", "\"" + SYNCED_AT.toEpochSecond() + "-down\""))
+                .andExpect(jsonPath("$.summary.oldestAwaitingDispatchMinutes").value(10))
+                .andExpect(jsonPath("$.dispatchSentence").value(
+                        "1 active call is awaiting dispatch — waiting 10m as of the last update."));
+    }
+
+    /** Nothing has synced, so there is no moment to measure to: the count goes out, the wait does not. */
+    @Test
+    void sendsNoWaitBeforeAnySuccessfulSync() throws Exception {
+        when(database.getRecentIncidents()).thenReturn(List.of(
+                undispatched("26-002", "Medical Response - Fall", "2026-09-18T09:20:00-05:00")));
+        when(database.isDataSourceAvailable()).thenReturn(true);
+        when(database.getLastSuccessfulSync()).thenReturn(null);
+
+        mockMvc.perform(get("/api/incidents"))
+                .andExpect(jsonPath("$.summary.awaitingDispatch").value(1))
+                .andExpect(jsonPath("$.summary.oldestAwaitingDispatchMinutes").doesNotExist())
+                .andExpect(jsonPath("$.dispatchSentence").value("1 active call is awaiting dispatch."));
     }
 
     /** Nothing waiting is sent as an empty string: that is how the page is told to hide the line. */
