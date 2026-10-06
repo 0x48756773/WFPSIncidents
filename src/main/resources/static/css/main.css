@@ -613,8 +613,24 @@ html.dark-mode .page-notes > summary:hover h2 {
     margin: 0 0 0.25rem;
 }
 
+/*
+ * Reads as a footnote to the answer above it, not a second answer. The amber is darker
+ * than it looks like it needs to be: at this size it is normal-weight text as far as WCAG
+ * is concerned, and the obvious #b06a00 lands at 4.3:1 on white, just under AA.
+ */
+.live-summary-dispatch {
+    color: #9a5c00;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+}
+
 html.dark-mode .live-summary-question {
     color: #adb5bd;
+}
+
+html.dark-mode .live-summary-dispatch {
+    color: #f0ad4e;
 }
 
 /* ---- Install prompt ---- */

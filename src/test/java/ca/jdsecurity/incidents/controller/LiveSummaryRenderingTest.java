@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,10 @@ class LiveSummaryRenderingTest {
      * blank cell.
      */
     private static Map<String, Object> incident(String number, String type, boolean closed) {
+        return incident(number, type, closed, "E1, L2");
+    }
+
+    private static Map<String, Object> incident(String number, String type, boolean closed, String units) {
         IncidentCategory category = IncidentCategory.of(type);
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("INCIDENT_NUMBER", number);
@@ -53,10 +58,15 @@ class LiveSummaryRenderingTest {
         row.put("CATEGORY", category.getId());
         row.put("CATEGORY_LABEL", category.getLabel());
         row.put("IS_MOTOR", "No");
-        row.put("UNITS", "E1, L2");
+        row.put("UNITS", units);
         row.put("NEIGHBOURHOOD", "Wolseley");
         row.put("WARD", "Daniel McIntyre");
         row.put("CALL_TIME", "September 18, 2026 at 09:15");
+        // The machine-readable counterpart the waiting time is measured from. Dated an hour
+        // and a half back so the figure is recognisable in the rendered page rather than
+        // being whatever the clock makes of a fixed timestamp.
+        row.put("CALL_TIME_ISO",
+                java.time.OffsetDateTime.now().minusMinutes(90).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         row.put("CLOSED", closed);
         row.put("CLOSED_TIME", closed ? "September 18, 2026 at 09:45" : "");
         row.put("DURATION", closed ? "30m" : "");
@@ -95,6 +105,33 @@ class LiveSummaryRenderingTest {
                 incident("26-002", "Medical Response - Fall", true)));
 
         assertThat(render()).contains("No Winnipeg Fire Paramedic Service calls are active right now.");
+    }
+
+    /**
+     * A call published with no units on it is the page's answer to "has anything been sitting
+     * unanswered", so it is rendered server-side for the same reason the fire answer is: a
+     * crawler, and a reader without JavaScript, never run the refresh that would paint it in.
+     */
+    @Test
+    void theAwaitingDispatchLineIsInTheHtml() throws Exception {
+        when(database.getRecentIncidents()).thenReturn(List.of(
+                incident("26-001", "Fire Rescue - Structure", false),
+                incident("26-002", "Medical Response - Fall", false, null)));
+
+        assertThat(render()).contains("1 active call is awaiting dispatch — waiting 1h 30m so far.");
+    }
+
+    /** Hidden rather than absent: the refresh cycle patches this element in place. */
+    @Test
+    void theAwaitingDispatchLineIsRenderedButHiddenWhenNothingIsWaiting() throws Exception {
+        when(database.getRecentIncidents()).thenReturn(List.of(
+                incident("26-001", "Fire Rescue - Structure", false)));
+
+        String html = render();
+
+        assertThat(html).contains("id=\"awaiting-dispatch\"");
+        assertThat(html).doesNotContain("awaiting dispatch —");
+        assertThat(html).containsPattern("id=\"awaiting-dispatch\"[^>]*hidden");
     }
 
     @Test

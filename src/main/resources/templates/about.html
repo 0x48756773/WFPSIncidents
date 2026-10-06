@@ -129,6 +129,16 @@
             it closes, marked <em>Closed</em> with the time units spent on scene, and shows calls from
             the past <span th:text="${callWindowHours}">24</span> hours.
         </p>
+        <p>
+            An active call that lists no units at all is counted on the front page as
+            <em>awaiting dispatch</em>, alongside how long the one waiting longest has waited.
+            That is read straight from the feed: the <code>units</code> field is absent until a
+            unit is attached to the incident. Read it as <em>no units are recorded against this
+            call yet</em> rather than as a measured response time &mdash; the feed publishes on a
+            five-minute cycle, so a call can already have units on the way before this site can
+            see them, and a call that closes without ever listing a unit is treated as attended
+            by none rather than as still waiting.
+        </p>
 
         <h2>What the markers show &mdash; and what they do not</h2>
         <p>

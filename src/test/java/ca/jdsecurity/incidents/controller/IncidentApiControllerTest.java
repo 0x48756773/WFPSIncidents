@@ -53,7 +53,16 @@ class IncidentApiControllerTest {
         row.put("INCIDENT_NUMBER", number);
         row.put("INCIDENT_TYPE", type);
         row.put("NEIGHBOURHOOD", "Wolseley");
+        row.put("UNITS", "E1, L2");
         row.put("CLOSED", closed);
+        return row;
+    }
+
+    /** An active call the feed has published with no units attached to it yet. */
+    private static Map<String, Object> undispatched(String number, String type, String callTimeIso) {
+        Map<String, Object> row = incident(number, type, false);
+        row.put("UNITS", null);
+        row.put("CALL_TIME_ISO", callTimeIso);
         return row;
     }
 
@@ -92,6 +101,38 @@ class IncidentApiControllerTest {
         mockMvc.perform(get("/api/incidents"))
                 .andExpect(jsonPath("$.summarySentence")
                         .value("1 Winnipeg Fire Paramedic Service call is active right now — 1 fire rescue call."));
+    }
+
+    /**
+     * The waiting count and the line that states it both travel on the poll. If either
+     * stopped being sent, the page would keep showing whatever it was rendered with, which
+     * for a wait that only grows is the one number that must not freeze.
+     */
+    @Test
+    void sendsTheAwaitingDispatchCountAndItsSentence() throws Exception {
+        when(database.getRecentIncidents()).thenReturn(List.of(
+                incident("26-001", "Fire Rescue - Structure", false),
+                undispatched("26-002", "Medical Response - Fall", "2026-09-18T09:20:00-05:00"),
+                undispatched("26-003", "Fire Response", "2026-09-18T09:25:00-05:00")));
+        when(database.isDataSourceAvailable()).thenReturn(true);
+
+        mockMvc.perform(get("/api/incidents"))
+                .andExpect(jsonPath("$.summary.awaitingDispatch").value(2))
+                .andExpect(jsonPath("$.summary.oldestAwaitingDispatchMinutes").isNumber())
+                .andExpect(jsonPath("$.dispatchSentence",
+                        org.hamcrest.Matchers.startsWith("2 active calls are awaiting dispatch")));
+    }
+
+    /** Nothing waiting is sent as an empty string: that is how the page is told to hide the line. */
+    @Test
+    void sendsAnEmptyDispatchSentenceWhenNothingIsWaiting() throws Exception {
+        when(database.getRecentIncidents()).thenReturn(List.of(
+                incident("26-001", "Fire Rescue - Structure", false)));
+        when(database.isDataSourceAvailable()).thenReturn(true);
+
+        mockMvc.perform(get("/api/incidents"))
+                .andExpect(jsonPath("$.summary.awaitingDispatch").value(0))
+                .andExpect(jsonPath("$.dispatchSentence").value(""));
     }
 
     /** A poll must still see the source going down, even when the data behind it has not moved. */
